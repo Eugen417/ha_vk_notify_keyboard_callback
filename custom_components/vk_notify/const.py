@@ -1,0 +1,5 @@
+DOMAIN = "vk_notify"
+CONF_ACCESS_TOKEN = "access_token"
+CONF_PEER_ID = "peer_id"
+VK_API_URL = "https://api.vk.com/method/messages.send"
+VK_API_VERSION = "5.199"

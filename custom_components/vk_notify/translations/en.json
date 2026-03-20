@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up VK Notify",
+        "description": "Enter your VK community bot token and target peer ID.\n\n[Documentation]({docs_url})",
+        "data": {
+          "access_token": "Access Token",
+          "peer_id": "Peer ID",
+          "name": "Name"
+        },
+        "data_description": {
+          "access_token": "VK community bot token with Messages permission",
+          "peer_id": "Target peer ID: user ID, or 2000000000 + chat_id for group chats",
+          "name": "Friendly name for this notification entity"
+        }
+      }
+    },
+    "error": {
+      "invalid_token": "Invalid access token or API error. Please check your token.",
+      "cannot_connect": "Failed to connect to VK API."
+    },
+    "abort": {
+      "already_configured": "This VK Notify instance is already configured."
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "VK Notify",
+  "domains": ["notify"],
+  "iot_class": "cloud_push",
+  "homeassistant": "2024.6.0",
+  "hacs": "1.34.0"
+}
