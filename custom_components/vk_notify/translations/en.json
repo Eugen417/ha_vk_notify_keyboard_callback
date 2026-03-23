@@ -3,25 +3,40 @@
     "step": {
       "user": {
         "title": "Set up VK Notify",
-        "description": "Enter your VK community bot token and target peer ID.\n\n[Documentation]({docs_url})",
+        "description": "Enter your VK community bot token.\n\n[Documentation]({docs_url})",
         "data": {
           "access_token": "Access Token",
-          "peer_id": "Peer ID",
           "name": "Name"
         },
         "data_description": {
           "access_token": "VK community bot token with Messages permission",
-          "peer_id": "Target peer ID: user ID, or 2000000000 + chat_id for group chats",
           "name": "Friendly name for this notification entity"
+        }
+      },
+      "select_chat": {
+        "title": "Select chat",
+        "description": "Select the chat to send notifications to.\n\nIf the desired chat is not in the list, the recipient must first send a message to the community.",
+        "data": {
+          "peer_id": "Chat"
+        }
+      },
+      "reconfigure": {
+        "title": "Change chat",
+        "description": "Select a new chat to send notifications to.",
+        "data": {
+          "peer_id": "Chat"
         }
       }
     },
     "error": {
       "invalid_token": "Invalid access token or API error. Please check your token.",
-      "cannot_connect": "Failed to connect to VK API."
+      "cannot_connect": "Failed to connect to VK API.",
+      "no_conversations": "No conversations found. Make sure the bot has at least one conversation.",
+      "chat_not_writable": "The bot cannot send messages to this chat. Select a different chat."
     },
     "abort": {
-      "already_configured": "This VK Notify instance is already configured."
+      "already_configured": "This VK Notify instance is already configured.",
+      "reconfigure_successful": "Re-configuration was successful."
     }
   },
   "services": {
