@@ -3,8 +3,19 @@ from __future__ import annotations
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode
 
-from .const import CONF_ACCESS_TOKEN, CONF_PEER_ID, DOMAIN, VK_API_VERSION
+from .const import (
+    CONF_ACCESS_TOKEN,
+    CONF_GROUP_ID,
+    CONF_MODE,
+    CONF_PEER_ID,
+    DOMAIN,
+    MODE_API,
+    MODE_LONGPOLL,
+    VK_API_CONVERSATIONS,
+    VK_API_VERSION,
+)
 
 STEP_TOKEN_SCHEMA = vol.Schema(
     {
@@ -13,7 +24,36 @@ STEP_TOKEN_SCHEMA = vol.Schema(
     }
 )
 
-VK_CONVERSATIONS_URL = "https://api.vk.com/method/messages.getConversations"
+
+async def _detect_group_id(hass, access_token: str) -> int | None:
+    """Try to auto-detect group_id from a community token via groups.getById."""
+    session = async_get_clientsession(hass)
+    try:
+        async with session.get(
+            "https://api.vk.com/method/groups.getById",
+            params={"access_token": access_token, "v": VK_API_VERSION},
+        ) as resp:
+            data = await resp.json()
+        groups = data.get("response", {}).get("groups", [])
+        if groups:
+            return groups[0]["id"]
+    except Exception:
+        pass
+    return None
+
+
+async def _check_longpoll_access(hass, access_token: str, group_id: int) -> bool:
+    """Return True if the token can call groups.getLongPollServer."""
+    session = async_get_clientsession(hass)
+    try:
+        async with session.get(
+            "https://api.vk.com/method/groups.getLongPollServer",
+            params={"access_token": access_token, "group_id": group_id, "v": VK_API_VERSION},
+        ) as resp:
+            data = await resp.json()
+        return "error" not in data
+    except Exception:
+        return False
 
 
 async def _validate_token(hass, access_token: str) -> bool:
@@ -30,11 +70,6 @@ async def _validate_token(hass, access_token: str) -> bool:
 
 
 def _build_conversations(response: dict) -> tuple[dict[str, str], set[str]]:
-    """Return (all_options, writable_ids).
-
-    all_options  — {peer_id_str: label} for the dropdown (all chats).
-    writable_ids — set of peer_id_str that can actually receive messages.
-    """
     profiles = {p["id"]: f"{p['first_name']} {p['last_name']}" for p in response.get("profiles", [])}
     groups = {g["id"]: g["name"] for g in response.get("groups", [])}
 
@@ -67,16 +102,10 @@ def _build_conversations(response: dict) -> tuple[dict[str, str], set[str]]:
 
 
 async def _get_conversations(hass, access_token: str) -> tuple[dict[str, str], set[str]]:
-    """Fetch conversations from VK API and return (all_options, writable_ids)."""
     session = async_get_clientsession(hass)
     async with session.get(
-        VK_CONVERSATIONS_URL,
-        params={
-            "access_token": access_token,
-            "extended": 1,
-            "count": 200,
-            "v": VK_API_VERSION,
-        },
+        VK_API_CONVERSATIONS,
+        params={"access_token": access_token, "extended": 1, "count": 200, "v": VK_API_VERSION},
     ) as resp:
         data = await resp.json()
 
@@ -92,6 +121,8 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._access_token: str = ""
         self._name: str = "VK Notify"
+        self._mode: str = MODE_API
+        self._group_id: int | None = None
 
     async def async_step_user(self, user_input=None):
         errors = {}
@@ -107,7 +138,8 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 else:
                     self._access_token = user_input[CONF_ACCESS_TOKEN]
                     self._name = user_input.get("name", "VK Notify")
-                    return await self.async_step_select_chat()
+                    self._group_id = await _detect_group_id(self.hass, self._access_token)
+                    return await self.async_step_select_mode()
 
         return self.async_show_form(
             step_id="user",
@@ -116,6 +148,44 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={
                 "docs_url": "https://udocs.ru/posts/home-assistant/integrations/otpravka-uvedomleniy-v-vk"
             },
+        )
+
+    async def async_step_select_mode(self, user_input=None):
+        errors = {}
+
+        if user_input is not None:
+            mode = user_input[CONF_MODE]
+
+            if mode == MODE_LONGPOLL and not self._group_id:
+                # group_id не удалось определить из токена — Long Poll невозможен
+                errors["base"] = "group_id_required"
+            elif mode == MODE_LONGPOLL:
+                ok = await _check_longpoll_access(self.hass, self._access_token, self._group_id)
+                if not ok:
+                    errors["base"] = "longpoll_no_access"
+                else:
+                    self._mode = mode
+                    return await self.async_step_select_chat()
+            else:
+                self._mode = mode
+                return await self.async_step_select_chat()
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_MODE, default=MODE_API): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[MODE_API, MODE_LONGPOLL],
+                        mode=SelectSelectorMode.LIST,
+                        translation_key="mode",
+                    )
+                ),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="select_mode",
+            data_schema=schema,
+            errors=errors,
         )
 
     async def async_step_select_chat(self, user_input=None):
@@ -133,15 +203,15 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data={
                         CONF_ACCESS_TOKEN: self._access_token,
                         CONF_PEER_ID: int(user_input[CONF_PEER_ID]),
+                        CONF_MODE: self._mode,
+                        CONF_GROUP_ID: self._group_id,
                         "name": self._name,
                     },
                 )
 
         return self.async_show_form(
             step_id="select_chat",
-            data_schema=vol.Schema(
-                {vol.Required(CONF_PEER_ID): vol.In(all_options)}
-            ),
+            data_schema=vol.Schema({vol.Required(CONF_PEER_ID): vol.In(all_options)}),
             errors=errors,
         )
 

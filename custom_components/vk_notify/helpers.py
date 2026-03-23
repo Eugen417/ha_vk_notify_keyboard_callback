@@ -15,10 +15,10 @@ async def async_upload_photo(
     url: str | None = None,
     filepath: str | None = None,
 ) -> str:
-    """Upload a photo to VK and return the attachment string (e.g. photo123_456)."""
+    """Загружает фото в VK и возвращает строку вложения вида photo{owner_id}_{id}."""
     session = async_get_clientsession(hass)
 
-    # Step 1: get upload server URL
+    # Шаг 1: получить URL сервера для загрузки фото сообщения
     async with session.get(
         VK_API_PHOTO_UPLOAD_SERVER,
         params={"access_token": access_token, "peer_id": peer_id, "v": VK_API_VERSION},
@@ -28,7 +28,7 @@ async def async_upload_photo(
         raise HomeAssistantError(f"VK API error (getMessagesUploadServer): {data['error']}")
     upload_url = data["response"]["upload_url"]
 
-    # Step 2: fetch photo bytes
+    # Шаг 2: получить байты фото — либо скачать по URL, либо прочитать локальный файл
     if url:
         async with session.get(url) as resp:
             photo_bytes = await resp.read()
@@ -43,13 +43,13 @@ async def async_upload_photo(
         )
         filename = filepath.split("/")[-1]
 
-    # Step 3: upload to VK server
+    # Шаг 3: загрузить фото на сервер VK через multipart/form-data
     form = aiohttp.FormData()
     form.add_field("photo", photo_bytes, filename=filename, content_type="image/jpeg")
     async with session.post(upload_url, data=form) as resp:
         upload_result = await resp.json()
 
-    # Step 4: save photo
+    # Шаг 4: сохранить загруженное фото и получить его идентификатор
     async with session.get(
         VK_API_PHOTO_SAVE,
         params={

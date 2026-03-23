@@ -11,8 +11,18 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import CONF_ACCESS_TOKEN, CONF_PEER_ID, DOMAIN, VK_API_URL, VK_API_VERSION
+from .const import (
+    CONF_ACCESS_TOKEN,
+    CONF_GROUP_ID,
+    CONF_MODE,
+    CONF_PEER_ID,
+    DOMAIN,
+    MODE_LONGPOLL,
+    VK_API_URL,
+    VK_API_VERSION,
+)
 from .helpers import async_upload_photo
+from .longpoll import VkLongPollManager
 
 PLATFORMS = [Platform.NOTIFY]
 
@@ -21,7 +31,7 @@ SERVICE_SEND_PHOTO = "send_photo"
 SEND_PHOTO_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_ids,
-        vol.Exclusive("url", "source"): cv.url,
+        vol.Exclusive("url", "source"): cv.url,   # url и file взаимоисключающие
         vol.Exclusive("file", "source"): cv.string,
         vol.Optional("message", default=""): cv.string,
     }
@@ -30,14 +40,44 @@ SEND_PHOTO_SCHEMA = vol.Schema(
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = entry.data
+    # lp_managers — общий словарь {group_id: {manager, refcount}} для всех записей
+    hass.data[DOMAIN].setdefault("lp_managers", {})
+    hass.data[DOMAIN][entry.entry_id] = {"data": entry.data}
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _async_register_services(hass)
+
+    if entry.data.get(CONF_MODE) == MODE_LONGPOLL:
+        group_id: int = entry.data[CONF_GROUP_ID]
+        lp_managers: dict = hass.data[DOMAIN]["lp_managers"]
+
+        if group_id in lp_managers:
+            # Менеджер для этого сообщества уже запущен другой записью — просто увеличиваем счётчик
+            lp_managers[group_id]["refcount"] += 1
+        else:
+            # Первая запись с данным group_id — создаём и запускаем менеджер
+            manager = VkLongPollManager(
+                hass,
+                access_token=entry.data[CONF_ACCESS_TOKEN],
+                group_id=group_id,
+            )
+            lp_managers[group_id] = {"manager": manager, "refcount": 1}
+            manager.start()
+
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    if entry.data.get(CONF_MODE) == MODE_LONGPOLL:
+        group_id: int = entry.data[CONF_GROUP_ID]
+        lp_managers: dict = hass.data[DOMAIN]["lp_managers"]
+        if group_id in lp_managers:
+            lp_managers[group_id]["refcount"] -= 1
+            if lp_managers[group_id]["refcount"] <= 0:
+                # Последняя запись с этим group_id выгружена — останавливаем менеджер
+                await lp_managers[group_id]["manager"].stop()
+                del lp_managers[group_id]
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -45,6 +85,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 def _async_register_services(hass: HomeAssistant) -> None:
+    """Зарегистрировать сервисы интеграции. Вызывается при каждой загрузке записи,
+    но реальная регистрация происходит только один раз."""
     if hass.services.has_service(DOMAIN, SERVICE_SEND_PHOTO):
         return
 
@@ -62,10 +104,11 @@ def _async_register_services(hass: HomeAssistant) -> None:
             if entry_entity is None or entry_entity.config_entry_id not in hass.data[DOMAIN]:
                 raise HomeAssistantError(f"Entity {entity_id} not found or not a VK Notify entity")
 
-            entry_data = hass.data[DOMAIN][entry_entity.config_entry_id]
+            entry_data = hass.data[DOMAIN][entry_entity.config_entry_id]["data"]
             access_token: str = entry_data[CONF_ACCESS_TOKEN]
             peer_id: int = entry_data[CONF_PEER_ID]
 
+            # Загружаем фото в VK и получаем строку вложения
             attachment = await async_upload_photo(hass, access_token, peer_id, url=url, filepath=filepath)
 
             params = {

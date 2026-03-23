@@ -13,6 +13,13 @@
           "name": "Friendly name for this notification entity"
         }
       },
+      "select_mode": {
+        "title": "Connection mode",
+        "description": "Choose how the integration connects to VK.",
+        "data": {
+          "mode": "Mode"
+        }
+      },
       "select_chat": {
         "title": "Select chat",
         "description": "Select the chat to send notifications to.\n\nIf the desired chat is not in the list, the recipient must first send a message to the community.",
@@ -32,11 +39,21 @@
       "invalid_token": "Invalid access token or API error. Please check your token.",
       "cannot_connect": "Failed to connect to VK API.",
       "no_conversations": "No conversations found. Make sure the bot has at least one conversation.",
+      "group_id_required": "Could not detect community ID from the token. Make sure the token belongs to a community.",
+      "longpoll_no_access": "The token does not have permission to use Long Poll. Re-generate the community token with 'Community management' permission enabled.",
       "chat_not_writable": "The bot cannot send messages to this chat. Select a different chat."
     },
     "abort": {
       "already_configured": "This VK Notify instance is already configured.",
       "reconfigure_successful": "Re-configuration was successful."
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "api": "API — send only",
+        "longpoll": "Long Poll — send and receive incoming messages as HA events"
+      }
     }
   },
   "services": {

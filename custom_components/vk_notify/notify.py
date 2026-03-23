@@ -33,6 +33,7 @@ class VkNotifyEntity(NotifyEntity):
         self._attr_name = entry.data.get("name", "VK Notify")
 
     async def async_send_message(self, message: str, title: str | None = None) -> None:
+        # Если передан заголовок — добавляем его первой строкой
         if title:
             message = f"{title}\n{message}"
 
@@ -41,6 +42,7 @@ class VkNotifyEntity(NotifyEntity):
             "access_token": self._access_token,
             "peer_id": self._peer_id,
             "message": message,
+            # random_id предотвращает дублирование сообщений на стороне VK
             "random_id": random.randint(0, 2**31),
             "v": VK_API_VERSION,
         }
