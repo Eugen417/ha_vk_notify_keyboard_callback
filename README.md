@@ -7,7 +7,7 @@
 ## Требования
 
 - Сообщество ВКонтакте с включёнными сообщениями
-- Токен API сообщества с правом `messages`
+- Токен API сообщества с правами `messages` и `photos` (если нужна отправка фото)
 
 ## Установка
 
@@ -35,10 +35,12 @@
 
 ## Использование
 
-Вызов сервиса `notify.send_message`:
+### Отправка текстового сообщения
+
+Сервис `notify.send_message`:
 
 ```yaml
-service: notify.send_message
+action: notify.send_message
 target:
   entity_id: notify.vk_notify
 data:
@@ -46,11 +48,33 @@ data:
   title: "Оповещение" # необязательно
 ```
 
-Использование в автоматизации:
+### Отправка фото
+
+Сервис `vk_notify.send_photo`:
+
+```yaml
+action: vk_notify.send_photo
+data:
+  entity_id: notify.vk_notify
+  url: "https://example.com/photo.jpg"
+  message: "Подпись к фото" # необязательно
+```
+
+Или с локальным файлом (путь должен быть добавлен в `allowlist_external_dirs`):
+
+```yaml
+action: vk_notify.send_photo
+data:
+  entity_id: notify.vk_notify
+  file: "/config/www/photo.jpg"
+  message: "Подпись к фото"
+```
+
+### Использование в автоматизации
 
 ```yaml
 action:
-  - service: notify.send_message
+  - action: notify.send_message
     target:
       entity_id: notify.vk_notify
     data:
@@ -60,5 +84,7 @@ action:
 ## Получение токена сообщества ВКонтакте
 
 1. Откройте управление сообществом → **Управление → Работа с API → Ключи доступа**
-2. Создайте ключ с правом **Сообщения**
+2. Создайте ключ с правами:
+   - **Сообщения** — для отправки текстовых уведомлений
+   - **Фотографии** — для отправки фото
 3. В настройках сообщества включите **Разрешить отправку сообщений**

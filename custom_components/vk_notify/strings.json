@@ -23,5 +23,29 @@
     "abort": {
       "already_configured": "This VK Notify instance is already configured."
     }
+  },
+  "services": {
+    "send_photo": {
+      "name": "Send photo",
+      "description": "Send a photo via VK.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity to send through."
+        },
+        "url": {
+          "name": "URL",
+          "description": "URL of the photo to send. Mutually exclusive with file."
+        },
+        "file": {
+          "name": "File",
+          "description": "Local file path of the photo. The path must be listed in allowlist_external_dirs. Mutually exclusive with url."
+        },
+        "message": {
+          "name": "Caption",
+          "description": "Optional caption for the photo."
+        }
+      }
+    }
   }
 }
