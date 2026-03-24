@@ -57,6 +57,24 @@
     }
   },
   "services": {
+    "send_file": {
+      "name": "Send file",
+      "description": "Send a file via VK.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity to send through."
+        },
+        "file": {
+          "name": "File",
+          "description": "Local file path. The path must be listed in allowlist_external_dirs. OGG files are sent as voice messages. MP3 and executable files are not supported."
+        },
+        "message": {
+          "name": "Caption",
+          "description": "Optional caption for the file."
+        }
+      }
+    },
     "send_photo": {
       "name": "Send photo",
       "description": "Send a photo via VK.",

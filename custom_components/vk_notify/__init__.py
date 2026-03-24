@@ -21,12 +21,13 @@ from .const import (
     VK_API_URL,
     VK_API_VERSION,
 )
-from .helpers import async_upload_photo
+from .helpers import async_upload_file, async_upload_photo
 from .longpoll import VkLongPollManager
 
 PLATFORMS = [Platform.NOTIFY]
 
 SERVICE_SEND_PHOTO = "send_photo"
+SERVICE_SEND_FILE = "send_file"
 
 SEND_PHOTO_SCHEMA = vol.Schema(
     {
@@ -125,3 +126,49 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 raise HomeAssistantError(f"VK API error (messages.send): {data['error']}")
 
     hass.services.async_register(DOMAIN, SERVICE_SEND_PHOTO, handle_send_photo, schema=SEND_PHOTO_SCHEMA)
+
+    if hass.services.has_service(DOMAIN, SERVICE_SEND_FILE):
+        return
+
+    SEND_FILE_SCHEMA = vol.Schema(
+        {
+            vol.Required("entity_id"): cv.entity_ids,
+            vol.Required("file"): cv.string,
+            vol.Optional("message", default=""): cv.string,
+        }
+    )
+
+    async def handle_send_file(call: ServiceCall) -> None:
+        entity_ids: list[str] = call.data["entity_id"]
+        filepath: str = call.data["file"]
+        caption: str = call.data.get("message", "")
+
+        ent_reg = er.async_get(hass)
+        session = async_get_clientsession(hass)
+
+        for entity_id in entity_ids:
+            entry_entity = ent_reg.async_get(entity_id)
+            if entry_entity is None or entry_entity.config_entry_id not in hass.data[DOMAIN]:
+                raise HomeAssistantError(f"Entity {entity_id} not found or not a VK Notify entity")
+
+            entry_data = hass.data[DOMAIN][entry_entity.config_entry_id]["data"]
+            access_token: str = entry_data[CONF_ACCESS_TOKEN]
+            peer_id: int = entry_data[CONF_PEER_ID]
+
+            # Загружаем файл в VK и получаем строку вложения
+            attachment = await async_upload_file(hass, access_token, peer_id, filepath)
+
+            params = {
+                "access_token": access_token,
+                "peer_id": peer_id,
+                "attachment": attachment,
+                "message": caption,
+                "random_id": random.randint(0, 2**31),
+                "v": VK_API_VERSION,
+            }
+            async with session.get(VK_API_URL, params=params) as resp:
+                data = await resp.json()
+            if "error" in data:
+                raise HomeAssistantError(f"VK API error (messages.send): {data['error']}")
+
+    hass.services.async_register(DOMAIN, SERVICE_SEND_FILE, handle_send_file, schema=SEND_FILE_SCHEMA)

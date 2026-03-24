@@ -5,7 +5,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import VK_API_PHOTO_SAVE, VK_API_PHOTO_UPLOAD_SERVER, VK_API_VERSION
+from .const import VK_API_DOC_SAVE, VK_API_DOC_UPLOAD_SERVER, VK_API_PHOTO_SAVE, VK_API_PHOTO_UPLOAD_SERVER, VK_API_VERSION
 
 
 async def async_upload_photo(
@@ -66,3 +66,68 @@ async def async_upload_photo(
 
     photo = data["response"][0]
     return f"photo{photo['owner_id']}_{photo['id']}"
+
+
+async def async_upload_file(
+    hass: HomeAssistant,
+    access_token: str,
+    peer_id: int,
+    filepath: str,
+) -> str:
+    """Загружает произвольный файл в VK и возвращает строку вложения вида doc{owner_id}_{id}_{access_key}.
+
+    OGG-файлы автоматически загружаются как голосовые сообщения (audio_message).
+    """
+    session = async_get_clientsession(hass)
+
+    if not hass.config.is_allowed_path(filepath):
+        raise HomeAssistantError(
+            f"Path '{filepath}' is not allowed. Add it to allowlist_external_dirs."
+        )
+
+    # OGG загружается как голосовое сообщение, остальные файлы — как обычный документ
+    doc_type = "audio_message" if filepath.lower().endswith(".ogg") else "doc"
+
+    # Шаг 1: получить URL сервера для загрузки документа
+    async with session.get(
+        VK_API_DOC_UPLOAD_SERVER,
+        params={"access_token": access_token, "peer_id": peer_id, "type": doc_type, "v": VK_API_VERSION},
+    ) as resp:
+        data = await resp.json()
+    if "error" in data:
+        raise HomeAssistantError(f"VK API error (docs.getMessagesUploadServer): {data['error']}")
+    upload_url = data["response"]["upload_url"]
+
+    # Шаг 2: прочитать файл и загрузить на сервер VK
+    filename = filepath.split("/")[-1]
+    file_bytes = await hass.async_add_executor_job(
+        lambda: open(filepath, "rb").read()  # noqa: WPS515
+    )
+    form = aiohttp.FormData()
+    form.add_field("file", file_bytes, filename=filename)
+    async with session.post(upload_url, data=form) as resp:
+        upload_result = await resp.json()
+
+    # Шаг 3: сохранить документ и получить его идентификатор
+    async with session.get(
+        VK_API_DOC_SAVE,
+        params={
+            "access_token": access_token,
+            "v": VK_API_VERSION,
+            "file": upload_result["file"],
+            "title": filename,
+        },
+    ) as resp:
+        data = await resp.json()
+    if "error" in data:
+        raise HomeAssistantError(f"VK API error (docs.save): {data['error']}")
+
+    # Ключ в response зависит от типа: "doc" или "audio_message"
+    response = data["response"]
+    obj = response.get("doc") or response.get("audio_message")
+    if not obj:
+        raise HomeAssistantError(f"VK API (docs.save): unexpected response: {response}")
+
+    attachment_type = "doc" if "doc" in response else "audio_message"
+    access_key = obj.get("access_key", "")
+    return f"{attachment_type}{obj['owner_id']}_{obj['id']}{'_' + access_key if access_key else ''}"

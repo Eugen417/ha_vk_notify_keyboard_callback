@@ -1,3 +1,20 @@
+send_file:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: vk_notify
+          domain: notify
+    file:
+      required: true
+      selector:
+        text:
+    message:
+      selector:
+        text:
+          multiline: true
+
 send_photo:
   fields:
     entity_id:
