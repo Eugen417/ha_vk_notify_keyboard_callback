@@ -57,6 +57,24 @@
     }
   },
   "services": {
+    "wall_post": {
+      "name": "Post to wall",
+      "description": "Publish a post on the VK community wall. Returns post_id that can be used with wall_edit.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity (determines which community to post to)."
+        },
+        "message": {
+          "name": "Message",
+          "description": "Text of the post."
+        },
+        "file": {
+          "name": "File",
+          "description": "Local path to a document to attach. OGG files are not supported."
+        }
+      }
+    },
     "send_file": {
       "name": "Send file",
       "description": "Send a file via VK.",

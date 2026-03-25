@@ -5,7 +5,7 @@ import random
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
@@ -20,6 +20,7 @@ from .const import (
     MODE_LONGPOLL,
     VK_API_URL,
     VK_API_VERSION,
+    VK_API_WALL_POST,
 )
 from .helpers import async_upload_file, async_upload_photo
 from .longpoll import VkLongPollManager
@@ -28,6 +29,7 @@ PLATFORMS = [Platform.NOTIFY]
 
 SERVICE_SEND_PHOTO = "send_photo"
 SERVICE_SEND_FILE = "send_file"
+SERVICE_WALL_POST = "wall_post"
 
 SEND_PHOTO_SCHEMA = vol.Schema(
     {
@@ -172,3 +174,68 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 raise HomeAssistantError(f"VK API error (messages.send): {data['error']}")
 
     hass.services.async_register(DOMAIN, SERVICE_SEND_FILE, handle_send_file, schema=SEND_FILE_SCHEMA)
+
+    if hass.services.has_service(DOMAIN, SERVICE_WALL_POST):
+        return
+
+    WALL_POST_SCHEMA = vol.Schema(
+        {
+            vol.Required("entity_id"): cv.entity_ids,
+            vol.Optional("message", default=""): cv.string,
+            vol.Optional("file"): cv.string,
+        }
+    )
+
+    async def handle_wall_post(call: ServiceCall) -> ServiceResponse:
+        entity_ids: list[str] = call.data["entity_id"]
+        message: str = call.data.get("message", "")
+        filepath: str | None = call.data.get("file")
+
+        ent_reg = er.async_get(hass)
+        session = async_get_clientsession(hass)
+        post_ids: dict[str, int] = {}
+
+        for entity_id in entity_ids:
+            entry_entity = ent_reg.async_get(entity_id)
+            if entry_entity is None or entry_entity.config_entry_id not in hass.data[DOMAIN]:
+                raise HomeAssistantError(f"Entity {entity_id} not found or not a VK Notify entity")
+
+            entry_data = hass.data[DOMAIN][entry_entity.config_entry_id]["data"]
+            access_token: str = entry_data[CONF_ACCESS_TOKEN]
+            group_id: int = entry_data[CONF_GROUP_ID]
+            peer_id: int = entry_data[CONF_PEER_ID]
+            attachments: list[str] = []
+
+            if filepath:
+                if filepath.lower().endswith(".ogg"):
+                    raise HomeAssistantError("OGG files cannot be attached to wall posts (VK API limitation).")
+                file_attachment = await async_upload_file(hass, access_token, peer_id, filepath)
+                attachments.append(file_attachment)
+
+            params = {
+                "access_token": access_token,
+                "owner_id": f"-{group_id}",
+                "from_group": 1,
+                "message": message,
+                "v": VK_API_VERSION,
+            }
+            if attachments:
+                params["attachments"] = ",".join(attachments)
+
+            async with session.post(VK_API_WALL_POST, data=params) as resp:
+                data = await resp.json()
+            if "error" in data:
+                raise HomeAssistantError(f"VK API error (wall.post): {data['error']}")
+
+            post_ids[entity_id] = data["response"]["post_id"]
+
+        # Возвращаем post_id: если один entity — просто число, если несколько — словарь
+        if len(post_ids) == 1:
+            return {"post_id": next(iter(post_ids.values()))}
+        return {"post_ids": post_ids}
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_WALL_POST, handle_wall_post,
+        schema=WALL_POST_SCHEMA, supports_response=SupportsResponse.OPTIONAL,
+    )
+

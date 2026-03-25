@@ -1,3 +1,20 @@
+wall_post:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: vk_notify
+          domain: notify
+    message:
+      selector:
+        text:
+          multiline: true
+    file:
+      selector:
+        text:
+
+
 send_file:
   fields:
     entity_id:
