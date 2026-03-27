@@ -30,7 +30,8 @@ async def async_upload_photo(
 
     # Шаг 2: получить байты фото — либо скачать по URL, либо прочитать локальный файл
     if url:
-        async with session.get(url) as resp:
+        # SSL-проверка отключена для поддержки локальных серверов с самоподписанным сертификатом
+        async with session.get(url, ssl=False) as resp:
             photo_bytes = await resp.read()
         filename = url.rstrip("/").split("/")[-1] or "photo.jpg"
     else:
