@@ -14,7 +14,6 @@ wall_post:
       selector:
         text:
 
-
 send_file:
   fields:
     entity_id:
@@ -31,6 +30,9 @@ send_file:
       selector:
         text:
           multiline: true
+    keyboard:
+      selector:
+        object: {}
 
 send_photo:
   fields:
@@ -50,3 +52,26 @@ send_photo:
       selector:
         text:
           multiline: true
+    keyboard:
+      selector:
+        object: {}
+
+send_message:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          integration: vk_notify
+          domain: notify
+    message:
+      required: true
+      selector:
+        text:
+          multiline: true
+    title:
+      selector:
+        text:
+    keyboard:
+      selector:
+        object: {}
