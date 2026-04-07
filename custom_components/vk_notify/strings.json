@@ -90,6 +90,10 @@
         "message": {
           "name": "Caption",
           "description": "Optional caption for the file."
+        },
+        "keyboard": {
+          "name": "Keyboard",
+          "description": "Optional inline keyboard JSON object (e.g., for buttons with links)."
         }
       }
     },
@@ -112,6 +116,32 @@
         "message": {
           "name": "Caption",
           "description": "Optional caption for the photo."
+        },
+        "keyboard": {
+          "name": "Keyboard",
+          "description": "Optional inline keyboard JSON object (e.g., for buttons with links)."
+        }
+      }
+    },
+    "send_message": {
+      "name": "Send message",
+      "description": "Send a text message via VK.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity to send through."
+        },
+        "message": {
+          "name": "Message",
+          "description": "Text of the message."
+        },
+        "title": {
+          "name": "Title",
+          "description": "Optional title, added as the first line of the message."
+        },
+        "keyboard": {
+          "name": "Keyboard",
+          "description": "Optional inline keyboard JSON object (e.g., for buttons with links)."
         }
       }
     }
