@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 import random
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse, ServiceResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
@@ -30,6 +31,7 @@ PLATFORMS = [Platform.NOTIFY]
 SERVICE_SEND_PHOTO = "send_photo"
 SERVICE_SEND_FILE = "send_file"
 SERVICE_WALL_POST = "wall_post"
+SERVICE_SEND_MESSAGE = "send_message"  # ДОБАВЛЕНО: новый сервис для сообщений
 
 SEND_PHOTO_SCHEMA = vol.Schema(
     {
@@ -37,6 +39,7 @@ SEND_PHOTO_SCHEMA = vol.Schema(
         vol.Exclusive("url", "source"): cv.url,   # url и file взаимоисключающие
         vol.Exclusive("file", "source"): cv.string,
         vol.Optional("message", default=""): cv.string,
+        vol.Optional("keyboard"): dict,  # поддержка клавиатуры
     }
 )
 
@@ -90,6 +93,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 def _async_register_services(hass: HomeAssistant) -> None:
     """Зарегистрировать сервисы интеграции. Вызывается при каждой загрузке записи,
     но реальная регистрация происходит только один раз."""
+    
     if hass.services.has_service(DOMAIN, SERVICE_SEND_PHOTO):
         return
 
@@ -98,6 +102,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         url: str | None = call.data.get("url")
         filepath: str | None = call.data.get("file")
         caption: str = call.data.get("message", "")
+        keyboard: dict | None = call.data.get("keyboard")
 
         ent_reg = er.async_get(hass)
         session = async_get_clientsession(hass)
@@ -122,6 +127,9 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 "random_id": random.randint(0, 2**31),
                 "v": VK_API_VERSION,
             }
+            if keyboard:
+                params["keyboard"] = json.dumps(keyboard, ensure_ascii=False)
+
             async with session.get(VK_API_URL, params=params) as resp:
                 data = await resp.json()
             if "error" in data:
@@ -137,6 +145,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             vol.Required("entity_id"): cv.entity_ids,
             vol.Required("file"): cv.string,
             vol.Optional("message", default=""): cv.string,
+            vol.Optional("keyboard"): dict,
         }
     )
 
@@ -144,6 +153,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         entity_ids: list[str] = call.data["entity_id"]
         filepath: str = call.data["file"]
         caption: str = call.data.get("message", "")
+        keyboard: dict | None = call.data.get("keyboard")
 
         ent_reg = er.async_get(hass)
         session = async_get_clientsession(hass)
@@ -168,6 +178,9 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 "random_id": random.randint(0, 2**31),
                 "v": VK_API_VERSION,
             }
+            if keyboard:
+                params["keyboard"] = json.dumps(keyboard, ensure_ascii=False)
+
             async with session.get(VK_API_URL, params=params) as resp:
                 data = await resp.json()
             if "error" in data:
@@ -229,7 +242,6 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
             post_ids[entity_id] = data["response"]["post_id"]
 
-        # Возвращаем post_id: если один entity — просто число, если несколько — словарь
         if len(post_ids) == 1:
             return {"post_id": next(iter(post_ids.values()))}
         return {"post_ids": post_ids}
@@ -239,3 +251,56 @@ def _async_register_services(hass: HomeAssistant) -> None:
         schema=WALL_POST_SCHEMA, supports_response=SupportsResponse.OPTIONAL,
     )
 
+    # --- ДОБАВЛЕНО: Новый сервис vk_notify.send_message ---
+    if hass.services.has_service(DOMAIN, SERVICE_SEND_MESSAGE):
+        return
+
+    SEND_MESSAGE_SCHEMA = vol.Schema(
+        {
+            vol.Required("entity_id"): cv.entity_ids,
+            vol.Required("message"): cv.string,
+            vol.Optional("title"): cv.string,
+            vol.Optional("keyboard"): dict,
+        }
+    )
+
+    async def handle_send_message(call: ServiceCall) -> None:
+        entity_ids: list[str] = call.data["entity_id"]
+        message: str = call.data["message"]
+        title: str | None = call.data.get("title")
+        keyboard: dict | None = call.data.get("keyboard")
+
+        # Добавляем заголовок, если он передан
+        if title:
+            message = f"{title}\n{message}"
+
+        ent_reg = er.async_get(hass)
+        session = async_get_clientsession(hass)
+
+        for entity_id in entity_ids:
+            entry_entity = ent_reg.async_get(entity_id)
+            if entry_entity is None or entry_entity.config_entry_id not in hass.data[DOMAIN]:
+                raise HomeAssistantError(f"Entity {entity_id} not found or not a VK Notify entity")
+
+            entry_data = hass.data[DOMAIN][entry_entity.config_entry_id]["data"]
+            access_token: str = entry_data[CONF_ACCESS_TOKEN]
+            peer_id: int = entry_data[CONF_PEER_ID]
+
+            params = {
+                "access_token": access_token,
+                "peer_id": peer_id,
+                "message": message,
+                "random_id": random.randint(0, 2**31),
+                "v": VK_API_VERSION,
+            }
+            
+            if keyboard:
+                params["keyboard"] = json.dumps(keyboard, ensure_ascii=False)
+
+            # Используем session.post, так как текст и клавиатура могут быть объемными
+            async with session.post(VK_API_URL, data=params) as resp:
+                data = await resp.json()
+            if "error" in data:
+                raise HomeAssistantError(f"VK API error (messages.send): {data['error']}")
+
+    hass.services.async_register(DOMAIN, SERVICE_SEND_MESSAGE, handle_send_message, schema=SEND_MESSAGE_SCHEMA)
