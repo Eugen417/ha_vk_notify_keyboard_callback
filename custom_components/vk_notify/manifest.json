@@ -1,11 +1,11 @@
 {
   "domain": "vk_notify",
-  "name": "VK Notify",
-  "codeowners": [],
+  "name": "VK Notify (Keyboard Edition)",
+  "codeowners": ["@Eugen417"],
   "config_flow": true,
-  "documentation": "https://github.com/udocs-ru/ha_vk_notify",
+  "documentation": "https://github.com/Eugen417/ha_vk_notify_keyboard_callback",
   "iot_class": "cloud_push",
-  "issue_tracker": "https://github.com/udocs-ru/ha_vk_notify/issues",
+  "issue_tracker": "https://github.com/Eugen417/ha_vk_notify_keyboard_callback/issues",
   "requirements": [],
-  "version": "1.0.0"
+  "version": "1.1.0"
 }
