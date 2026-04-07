@@ -1,208 +1,129 @@
-# VK Notify
+# VK Notify (Keyboard Edition) ⌨️
 
-Интеграция для Home Assistant для отправки уведомлений и получения входящих сообщений через VK.
+Форк оригинальной интеграции `ha_vk_notify` с добавленной поддержкой интерактивных клавиатур и callback-кнопок. Эта версия позволяет управлять вашим домом через ВКонтакте в «тихом» режиме, не засоряя чат текстовыми командами.
 
-Подробная инструкция по установке и настройке на сайте [uDocs](https://udocs.ru/posts/home-assistant/integrations/otpravka-uvedomleniy-v-vk)
+---
 
-## Требования
+## 🚀 Что нового в этой версии
 
-- Сообщество VK с включёнными сообщениями
-- Токен API сообщества с правами:
-  - **Сообщения** — для отправки уведомлений (обязательно)
-  - **Фотографии** — для отправки фото через `send_photo`
-  - **Документы** — для отправки файлов через `send_file`
-  - **Стена** — для публикации записей через `wall_post`
-  - **Управление сообществом** — для режима Long Poll
+* **Действие `vk_notify.send_message`**: Расширенный сервис для отправки сообщений с поддержкой JSON-клавиатур.
+* **Callback-кнопки**: Кнопки, которые при нажатии не отправляют текст в чат, а генерируют скрытое событие внутри Home Assistant.
+* **Инлайн-клавиатуры**: Кнопки, которые прикрепляются прямо к сообщению, а не висят под полем ввода.
+* **Цветные кнопки**: Поддержка всех 4-х стандартных цветов VK (синий, зеленый, красный, белый).
 
-## Установка
+---
+
+## ⚙️ Обязательная настройка ВКонтакте
+
+Для работы кнопок необходимо правильно настроить вашу группу (сообщество) в ВК:
+
+### 1. Возможности ботов
+Перейдите в: **Управление** > **Сообщения** > **Настройки для бота**
+* **Возможности ботов:** Включены
+* **Добавить кнопку «Начать»:** Включено (рекомендуется)
+* **Разрешать добавлять сообщество в чаты:** По желанию
+
+### 2. Настройка Long Poll API (Критически важно!)
+Перейдите в: **Управление** > **Работа с API** > **Long Poll API** > **Типы событий**
+
+В разделе **Сообщения** обязательно отметьте:
+* [x] **Входящее сообщение** (для обработки текста и команд `/`)
+* [x] **Исходящее сообщение** (для отслеживания статуса отправки)
+* [x] **Действие с сообщением** — **ОБЯЗАТЕЛЬНО** для работы `callback`-кнопок. Без этой галочки нажатия на кнопки не будут приходить в Home Assistant!
+
+---
+
+## 📖 Примеры использования
+
+### 1. Отправка пульта управления (Action)
+Используйте этот код в любой автоматизации, чтобы отправить интерактивное меню.
+
+```yaml
+action: vk_notify.send_message
+data:
+  entity_id: notify.vk_notify
+  message: "Выберите устройство:"
+  keyboard:
+    inline: true
+    buttons:
+      - - action:
+            type: callback
+            label: "Свет: Гостиная 💡"
+            payload: '{"action": "toggle", "item": "light.living_room"}'
+          color: primary
+        - action:
+            type: callback
+            label: "Все выключить 🌑"
+            payload: '{"action": "all_off"}'
+          color: negative
+      - - action:
+            type: text
+            label: "/status"
+          color: secondary
+```
+
+### 2. Обработка нажатий (Trigger)
+Эта автоматизация «слушает» нажатия callback-кнопок и выполняет действия на основе данных из `payload`.
+
+```yaml
+alias: "VK: Обработчик пульта"
+trigger:
+  - platform: event
+    event_type: vk_notify_callback
+action:
+  - choose:
+      # Логика для переключателя света
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.payload.action == 'toggle' }}"
+        sequence:
+          - action: light.toggle
+            target:
+              entity_id: "{{ trigger.event.data.payload.item }}"
+
+      # Логика для выключения всего света
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.payload.action == 'all_off' }}"
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: all
+```
+
+### 3. Реакция на текстовые команды
+Если вы нажали кнопку типа `text` или написали сообщение со слэшем (например, `/start`).
+
+```yaml
+alias: "VK: Команда старт"
+trigger:
+  - platform: event
+    event_type: vk_notify_command
+    event_data:
+      command: "start"
+action:
+  - action: vk_notify.send_message
+    data:
+      entity_id: "{{ trigger.event.data.entity_id }}"
+      message: "Бот готов! Используйте кнопки или команды для управления домом."
+```
+
+---
+
+## 🛠 Установка через HACS
+
 
 ### Через HACS
 
-[![Открыть в Home Assistant и установить VK Notify через HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=udocs-ru&repository=ha_vk_notify&category=integration)
+[![Открыть в Home Assistant и установить VK Notify через HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Eugen417&repository=ha_vk_notify_keyboard_callback&category=integration)
 
-Если кнопка не работает: добавьте репозиторий в HACS вручную (категория: Интеграция), установите "VK Notify" и перезапустите Home Assistant.
+Если кнопка не работает: добавьте репозиторий в HACS вручную (категория: Интеграция), установите "VK Notify (Keyboard Edition)" и перезапустите Home Assistant.
 
 ### Вручную (без HACS)
 
-1. Скопируйте папку `custom_components/vk_notify/` в директорию `config/custom_components/` вашего HA
-2. Перезапустите Home Assistant
-
-## Настройка
-
-1. Перейдите в **Настройки → Устройства и службы → Добавить интеграцию**
-2. Найдите **VK Notify**
-3. Введите токен доступа и название уведомителя
-4. Выберите режим подключения: **API** (только отправка) или **Long Poll** (отправка + получение)
-5. Выберите чат из списка — отображаются все беседы, в которых участвовал бот
-
-> Если нужного чата нет в списке, получатель должен первым написать сообщение сообществу.
-> Чаты, в которые бот не может писать, отмечены символом ⛔ и недоступны для выбора.
-
-### Несколько записей интеграции
-
-Можно создать несколько записей с разными чатами — например, для разных комнат или пользователей. При использовании одного токена Long Poll запускается в одном экземпляре на сообщество. События генерируются только для чатов, добавленных в интеграцию.
-
-### Изменить чат
-
-Чтобы сменить чат у уже настроенной интеграции:
-**Настройки → Устройства и службы → VK Notify → ⋮ → Перенастроить**
-
-## Отправка сообщений
-
-### Текстовое сообщение
-
-```yaml
-action: notify.send_message
-target:
-  entity_id: notify.vk_notify
-data:
-  message: "Привет из Home Assistant!"
-  title: "Оповещение" # необязательно, добавляется первой строкой
-```
-
-### Отправка фото
-
-По URL:
-
-```yaml
-action: vk_notify.send_photo
-data:
-  entity_id: notify.vk_notify
-  url: "https://example.com/photo.jpg"
-  message: "Подпись к фото" # необязательно
-```
-
-Или с локальным файлом (путь должен быть добавлен в `allowlist_external_dirs`):
-
-```yaml
-action: vk_notify.send_photo
-data:
-  entity_id: notify.vk_notify
-  file: "/config/www/photo.jpg"
-  message: "Подпись к фото"
-```
-
-### Отправка файла
-
-```yaml
-action: vk_notify.send_file
-data:
-  entity_id: notify.vk_notify
-  file: "/config/www/report.pdf"
-  message: "Отчёт за день"  # необязательно
-```
-
-Поддерживаются любые форматы файлов размером до 200 МБ, кроме MP3 и исполняемых файлов (.exe и др.). OGG-файлы отправляются как голосовые сообщения. Путь должен быть добавлен в `allowlist_external_dirs`.
-
-### Публикация на стене сообщества
-
-```yaml
-action: vk_notify.wall_post
-data:
-  entity_id: notify.vk_notify
-  message: "Запись на стене из Home Assistant"
-  file: "/config/www/report.pdf"  # необязательно
-response_variable: result
-# result.post_id содержит ID опубликованной записи
-```
-
-> Ограничения VK API: загрузка фото на стену недоступна с токеном сообщества. OGG-файлы также нельзя прикрепить к записи на стене. Редактирование опубликованных записей (`wall.edit`) с токеном сообщества недоступно.
-
-
-### Использование в автоматизации
-
-```yaml
-action:
-  - action: notify.send_message
-    target:
-      entity_id: notify.vk_notify
-    data:
-      message: "Входная дверь открыта"
-```
-
-## Режим Long Poll — получение входящих сообщений
-
-При выборе режима **Long Poll** интеграция подключается к серверу VK и получает входящие сообщения в реальном времени. События публикуются только для чатов, добавленных в интеграцию — сообщения из остальных чатов сообщества игнорируются.
-
-Для включения Long Poll необходимо:
-
-1. Включить **Bots Long Poll API** в управлении сообществом: **Управление → Работа с API → Bots Long Poll API → Включён**
-2. Выбрать типы событий (минимум — **Входящие сообщения**)
-3. Токен должен иметь право **Управление сообществом**
-
-### Типы событий
-
-#### `vk_notify_command` — команды (сообщения начинающиеся с `/`)
-
-| Поле         | Описание                                            |
-| ------------ | --------------------------------------------------- |
-| `command`    | Имя команды без `/` (например `lights`)             |
-| `args`       | Аргументы после команды (строка, может быть пустой) |
-| `text`       | Полный текст сообщения                              |
-| `peer_id`    | ID чата, из которого пришло сообщение               |
-| `from_id`    | ID пользователя-отправителя                         |
-| `message_id` | ID сообщения                                        |
-| `group_id`   | ID сообщества VK                                    |
-| `entity_id`  | Entity ID уведомителя, связанного с этим чатом |
-
-#### `vk_notify_text` — обычный текст
-
-| Поле         | Описание                    |
-| ------------ | --------------------------- |
-| `text`       | Текст сообщения             |
-| `peer_id`    | ID чата                     |
-| `from_id`    | ID пользователя-отправителя |
-| `message_id` | ID сообщения                |
-| `group_id`   | ID сообщества VK            |
-| `entity_id`  | Entity ID уведомителя, связанного с этим чатом |
-
-> При нескольких записях интеграции Long Poll работает в одном экземпляре на сообщество. Поле `entity_id` в событии указывает, какой именно уведомитель связан с чатом — используйте его для ответа в тот же чат.
-
-### Примеры автоматизаций
-
-**Команда `/lights` переключает свет:**
-
-```yaml
-automation:
-  trigger:
-    platform: event
-    event_type: vk_notify_command
-    event_data:
-      command: "lights"
-      peer_id: 123456789 # ID чата; уберите строку чтобы принимать из любого чата
-  action:
-    - action: light.toggle
-      target:
-        entity_id: light.living_room
-    - action: notify.send_message
-      target:
-        entity_id: notify.vk_notify
-      data:
-        message: "Свет переключён"
-```
-
-**Эхо-бот — отвечает на любой текст в тот же чат:**
-
-```yaml
-automation:
-  trigger:
-    platform: event
-    event_type: vk_notify_text
-  action:
-    - action: notify.send_message
-      target:
-        entity_id: "{{ trigger.event.data.entity_id }}"
-      data:
-        message: "Вы написали: {{ trigger.event.data.text }}"
-```
-
-## Получение токена сообщества VK
-
-1. Откройте управление сообществом → **Управление → Работа с API → Ключи доступа**
-2. Создайте ключ с нужными правами:
-   - **Сообщения** — для отправки уведомлений (обязательно)
-   - **Фотографии** — для `send_photo`
-   - **Документы** — для `send_file`
-   - **Стена** — для `wall_post`
-   - **Управление сообществом** — для режима Long Poll
-3. В настройках сообщества включите **Разрешить отправку сообщений**
+1. Откройте **HACS** > **Integrations**.
+2. Нажмите три точки в верхнем правом углу > **Custom repositories**.
+3. Вставьте ссылку на ваш репозиторий: `https://github.com/Eugen417/ha_vk_notify_keyboard_callback`
+4. Выберите категорию **Integration** и нажмите **Add**.
+5. Установите появившуюся интеграцию **VK Notify (Keyboard Edition)**.
+6. Перезагрузите Home Assistant.
