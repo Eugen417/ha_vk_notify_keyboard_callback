@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import random
 
 from homeassistant.components.notify import NotifyEntity, NotifyEntityFeature
@@ -32,7 +33,7 @@ class VkNotifyEntity(NotifyEntity):
         self._attr_unique_id = entry.entry_id
         self._attr_name = entry.data.get("name", "VK Notify")
 
-    async def async_send_message(self, message: str, title: str | None = None) -> None:
+    async def async_send_message(self, message: str, title: str | None = None, **kwargs) -> None:
         # Если передан заголовок — добавляем его первой строкой
         if title:
             message = f"{title}\n{message}"
@@ -47,11 +48,17 @@ class VkNotifyEntity(NotifyEntity):
             "v": VK_API_VERSION,
         }
 
+        # Извлекаем блок data из вызова службы HA
+        data = kwargs.get("data")
+        # Если в data передана keyboard, сериализуем её в JSON и добавляем к параметрам
+        if data and "keyboard" in data:
+            params["keyboard"] = json.dumps(data["keyboard"], ensure_ascii=False)
+
         try:
             async with session.get(VK_API_URL, params=params) as resp:
-                data = await resp.json()
+                data_json = await resp.json()
         except Exception as err:
             raise HomeAssistantError(f"Failed to connect to VK API: {err}") from err
 
-        if "error" in data:
-            raise HomeAssistantError(f"VK API error: {data['error']}")
+        if "error" in data_json:
+            raise HomeAssistantError(f"VK API error: {data_json['error']}")
