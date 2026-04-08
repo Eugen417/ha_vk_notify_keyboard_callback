@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+from typing import Any
 
 from homeassistant.components.notify import NotifyEntity, NotifyEntityFeature
 from homeassistant.config_entries import ConfigEntry
@@ -11,6 +12,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import CONF_ACCESS_TOKEN, CONF_PEER_ID, VK_API_URL, VK_API_VERSION
+from .helpers import async_upload_file
 
 
 async def async_setup_entry(
@@ -22,7 +24,6 @@ async def async_setup_entry(
 
 
 class VkNotifyEntity(NotifyEntity):
-    _attr_has_entity_name = True
     _attr_supported_features = NotifyEntityFeature.TITLE
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -30,8 +31,19 @@ class VkNotifyEntity(NotifyEntity):
         self._entry = entry
         self._access_token: str = entry.data[CONF_ACCESS_TOKEN]
         self._peer_id: int = entry.data[CONF_PEER_ID]
+        
         self._attr_unique_id = entry.entry_id
-        self._attr_name = entry.data.get("name", "VK Notify")
+        
+        # Формируем красивое имя: базовое название + ID чата
+        base_name = entry.data.get("name", "VK Notify")
+        self._attr_name = f"{base_name} {self._peer_id}"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Добавляем peer_id в атрибуты, чтобы его было видно в свойствах сущности."""
+        return {
+            "peer_id": self._peer_id,
+        }
 
     async def async_send_message(self, message: str, title: str | None = None, **kwargs) -> None:
         # Если передан заголовок — добавляем его первой строкой
@@ -43,19 +55,31 @@ class VkNotifyEntity(NotifyEntity):
             "access_token": self._access_token,
             "peer_id": self._peer_id,
             "message": message,
-            # random_id предотвращает дублирование сообщений на стороне VK
             "random_id": random.randint(0, 2**31),
             "v": VK_API_VERSION,
         }
 
-        # Извлекаем блок data из вызова службы HA
         data = kwargs.get("data")
-        # Если в data передана keyboard, сериализуем её в JSON и добавляем к параметрам
-        if data and "keyboard" in data:
-            params["keyboard"] = json.dumps(data["keyboard"], ensure_ascii=False)
+        if data:
+            # Обработка клавиатуры
+            if "keyboard" in data:
+                params["keyboard"] = json.dumps(data["keyboard"], ensure_ascii=False)
+            
+            # --- БЛОК: ЗАГРУЗКА ВИДЕО (через внешний хелпер) ---
+            if "video" in data:
+                video_path = data["video"]
+                try:
+                    # Используем готовую функцию из helpers.py
+                    attachment = await async_upload_file(self.hass, self._access_token, self._peer_id, video_path)
+                    params["attachment"] = attachment
+                except Exception as e:
+                    # Выводим ошибку в чат, если что-то пошло не так
+                    params["message"] += f"\n\n[⚠️ Ошибка прикрепления видео: {e}]"
+            # ---------------------------------------------------
 
         try:
-            async with session.get(VK_API_URL, params=params) as resp:
+            # Используем POST вместо GET для надежной передачи больших клавиатур и данных
+            async with session.post(VK_API_URL, data=params) as resp:
                 data_json = await resp.json()
         except Exception as err:
             raise HomeAssistantError(f"Failed to connect to VK API: {err}") from err
