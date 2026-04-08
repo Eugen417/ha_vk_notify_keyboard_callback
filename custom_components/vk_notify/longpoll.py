@@ -113,7 +113,16 @@ class VkLongPollManager:
             _LOGGER.debug("VK Callback received: peer=%s, event=%s, payload=%s", peer_id, event_id, payload)
 
             if ent_id:
-                self._hass.bus.async_fire(f"{DOMAIN}_callback", {"payload": payload, "peer_id": peer_id, "entity_id": ent_id})
+                # ВАЖНО: Добавили получение и передачу conversation_message_id
+                self._hass.bus.async_fire(
+                    f"{DOMAIN}_callback", 
+                    {
+                        "payload": payload, 
+                        "peer_id": peer_id, 
+                        "entity_id": ent_id,
+                        "conversation_message_id": obj.get("conversation_message_id")
+                    }
+                )
 
             # СРОЧНЫЙ ОТВЕТ СЕРВЕРУ VK (чтобы колесо не крутилось)
             self._hass.async_create_task(self._answer_callback(event_id, user_id, peer_id))
