@@ -1,13 +1,15 @@
 # VK Notify (Keyboard Edition) ⌨️
 
-Форк оригинальной интеграции `ha_vk_notify` с добавленной поддержкой интерактивных клавиатур и callback-кнопок. Эта версия позволяет управлять вашим домом через ВКонтакте в «тихом» режиме, не засоряя чат текстовыми командами.
+Форк оригинальной интеграции `ha_vk_notify` с добавленной поддержкой интерактивных клавиатур, callback-кнопок и динамического изменения сообщений. Эта версия позволяет управлять вашим домом через ВКонтакте в «тихом» режиме, создавая настоящие умные пульты прямо в чате.
 
 ---
 
 ## 🚀 Что нового в этой версии
 
 * **Действие `vk_notify.send_message`**: Расширенный сервис для отправки сообщений с поддержкой JSON-клавиатур.
-* **Callback-кнопки**: Кнопки, которые при нажатии не отправляют текст в чат, а генерируют скрытое событие внутри Home Assistant.
+* **Динамическое редактирование (`vk_notify.edit_message`)**: Возможность изменять текст и кнопки уже отправленного сообщения в чате (идеально для изменения статусов вкл/выкл).
+* **Удаление сообщений (`vk_notify.delete_message`)**: Удаление сообщений бота у всех участников чата.
+* **Callback-кнопки**: Кнопки, которые при нажатии не отправляют текст в чат, а генерируют скрытое событие внутри Home Assistant (теперь с передачей `conversation_message_id` для редактирования).
 * **Инлайн-клавиатуры**: Кнопки, которые прикрепляются прямо к сообщению, а не висят под полем ввода.
 * **Цветные кнопки**: Поддержка всех 4-х стандартных цветов VK (синий, зеленый, красный, белый).
 * **Умное именование:** Вам больше не нужно придумывать уникальные имена для каждого уведомителя. Интеграция автоматически формирует понятные названия карточек и `entity_id`, добавляя к базовому имени название чата и его `peer_id` (например: *VK Notify: Мой чат (2000012345)*).
@@ -101,7 +103,7 @@ actions:
         buttons:
           - - action:
                 type: open_link
-                link: "[https://yandex.ru/maps/?pt=37.62,55.75&z=15&l=map](https://yandex.ru/maps/?pt=37.62,55.75&z=15&l=map)"
+                link: "https://yandex.ru/maps/?pt=37.62,55.75&z=15&l=map"
                 label: "Открыть карту 📍"
 mode: single
 ```
@@ -156,9 +158,95 @@ actions:
 mode: single
 ```
 
+### 5. Умный пульт (Единая автоматизация с динамическим обновлением)
+Эта мощная автоматизация объединяет всё: она отправляет пульт по команде `/пульт`, а при нажатии на кнопку — переключает свет и **редактирует само сообщение**, меняя цвет кнопки (зеленый/красный) в зависимости от текущего статуса устройства.
+
+```yaml
+alias: "VK: Умный пульт (Единая автоматизация)"
+description: "Вызов пульта и динамическое обновление кнопок в одном месте"
+mode: parallel
+max: 10
+triggers:
+  # Триггер 1: Пользователь написал /пульт
+  - trigger: event
+    event_type: vk_notify_command
+    event_data:
+      command: пульт
+      peer_id: 2000001234
+    id: call_remote
+
+  # Триггер 2: Пользователь нажал невидимую кнопку callback
+  - trigger: event
+    event_type: vk_notify_callback
+    event_data:
+      peer_id: 2000001234
+    id: button_pressed
+
+actions:
+  - choose:
+      # ВЕТКА 1: Отправка нового пульта в чат
+      - conditions:
+          - condition: trigger
+            id: call_remote
+        sequence:
+          - action: vk_notify.send_message
+            data:
+              entity_id: notify.vk_notify_2000001234
+              message: "🎛 **Главный пульт управления**"
+              keyboard:
+                inline: true
+                buttons:
+                  - - action:
+                        type: callback
+                        label: >-
+                          {% if is_state('light.double_switch_2_2_3', 'on') %}Выключить свет 🌑
+                          {% else %}Включить свет 💡{% endif %}
+                        payload: '{"action": "toggle_light"}'
+                      color: >-
+                        {% if is_state('light.double_switch_2_2_3', 'on') %}negative
+                        {% else %}positive{% endif %}
+
+      # ВЕТКА 2: Обработка нажатий и обновление сообщения
+      - conditions:
+          - condition: trigger
+            id: button_pressed
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ trigger.event.data.payload.action == 'toggle_light' }}"
+                sequence:
+                  # 1. Переключаем свет
+                  - action: light.toggle
+                    target:
+                      entity_id: light.double_switch_2_2_3
+                  
+                  # 2. Ждем секунду для обновления статуса в HA
+                  - delay: "00:00:01"
+                  
+                  # 3. Редактируем сообщение (меняем цвет и текст)
+                  - action: vk_notify.edit_message
+                    data:
+                      entity_id: notify.vk_notify_2000001234
+                      conversation_message_id: "{{ trigger.event.data.conversation_message_id }}"
+                      message: "🎛 **Главный пульт управления**"
+                      keyboard:
+                        inline: true
+                        buttons:
+                          - - action:
+                                type: callback
+                                label: >-
+                                  {% if is_state('light.double_switch_2_2_3', 'on') %}Выключить свет 🌑
+                                  {% else %}Включить свет 💡{% endif %}
+                                payload: '{"action": "toggle_light"}'
+                              color: >-
+                                {% if is_state('light.double_switch_2_2_3', 'on') %}negative
+                                {% else %}positive{% endif %}
+```
+
 ---
 
-## 🛠 Установка через HACS
+## 🛠 Установка
 
 
 ### Через HACS
@@ -176,12 +264,10 @@ mode: single
 5. Установите появившуюся интеграцию **VK Notify (Keyboard Edition)**.
 6. Перезагрузите Home Assistant.
 
-<img width="584" height="722" alt="Снимок экрана 2026-04-08 в 10 24 57" src="https://github.com/user-attachments/assets/3b427935-f55f-4a38-b312-996a3b6fa1e2" />
+<img width="584" height="722" alt="Снимок экрана 2026-04-08 в 10 24 57" src="[https://github.com/user-attachments/assets/3b427935-f55f-4a38-b312-996a3b6fa1e2](https://github.com/user-attachments/assets/3b427935-f55f-4a38-b312-996a3b6fa1e2)" />
 
+<img width="882" height="798" alt="Снимок экрана 2026-04-08 в 10 29 28" src="[https://github.com/user-attachments/assets/5f5f5ad6-a9e8-42df-97f0-8333c94df659](https://github.com/user-attachments/assets/5f5f5ad6-a9e8-42df-97f0-8333c94df659)" />
 
-<img width="882" height="798" alt="Снимок экрана 2026-04-08 в 10 29 28" src="https://github.com/user-attachments/assets/5f5f5ad6-a9e8-42df-97f0-8333c94df659" />
+<img width="882" height="798" alt="Снимок экрана 2026-04-08 в 10 30 40" src="[https://github.com/user-attachments/assets/8fc155a5-cc20-48b6-91ec-89013a3e995a](https://github.com/user-attachments/assets/8fc155a5-cc20-48b6-91ec-89013a3e995a)" />
 
-<img width="882" height="798" alt="Снимок экрана 2026-04-08 в 10 30 40" src="https://github.com/user-attachments/assets/8fc155a5-cc20-48b6-91ec-89013a3e995a" />
-
-<img width="1011" height="840" alt="Снимок экрана 2026-04-08 в 10 27 48" src="https://github.com/user-attachments/assets/288f2258-0669-43e5-bd22-00ae36a9dcfa" />
-
+<img width="1011" height="840" alt="Снимок экрана 2026-04-08 в 10 27 48" src="[https://github.com/user-attachments/assets/288f2258-0669-43e5-bd22-00ae36a9dcfa](https://github.com/user-attachments/assets/288f2258-0669-43e5-bd22-00ae36a9dcfa)" />
