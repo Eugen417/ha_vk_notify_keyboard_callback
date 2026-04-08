@@ -41,6 +41,9 @@
 ### 1. Отправка пульта управления (Action)
 Используйте этот код в любой автоматизации, чтобы отправить интерактивное меню с кнопками. Обратите внимание, что кнопки могут быть разных типов: `callback` (скрытая отправка данных) и `text` (отправка текста в чат).
 
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
+
 ```yaml
 action: vk_notify.send_message
 data:
@@ -65,8 +68,13 @@ data:
           color: secondary
 ```
 
+</details>
+
 ### 2. Продвинутая клавиатура (Цвета и ссылки)
 Пример отправки сразу двух сообщений: одно с разноцветными кнопками, а второе — с кнопкой типа `open_link`, которая открывает нужный URL-адрес без отправки сообщений боту.
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
 
 ```yaml
 alias: "Пульт управления светом и картой"
@@ -108,8 +116,13 @@ actions:
 mode: single
 ```
 
+</details>
+
 ### 3. Обработка нажатий (Trigger)
 Эта автоматизация «слушает» невидимые нажатия `callback`-кнопок из примеров выше и выполняет действия в Home Assistant на основе данных из поля `payload`.
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
 
 ```yaml
 alias: "VK: Обработка кнопок пульта"
@@ -138,8 +151,13 @@ actions:
 mode: parallel
 ```
 
+</details>
+
 ### 4. Реакция на текстовые команды
 Если вы нажали кнопку типа `text` или просто написали в чат сообщение со слэшем (например, `/status`), Home Assistant сгенерирует событие `vk_notify_command`. Вот как на него ответить:
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
 
 ```yaml
 alias: "VK: Реакция на текстовые команды"
@@ -158,8 +176,13 @@ actions:
 mode: single
 ```
 
+</details>
+
 ### 5. Умный пульт (Единая автоматизация с динамическим обновлением)
 Эта мощная автоматизация объединяет всё: она отправляет пульт по команде `/пульт`, а при нажатии на кнопку — переключает свет и **редактирует само сообщение**, меняя цвет кнопки (зеленый/красный) в зависимости от текущего статуса устройства.
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
 
 ```yaml
 alias: "VK: Умный пульт (Единая автоматизация)"
@@ -244,8 +267,13 @@ actions:
                                 {% else %}positive{% endif %}
 ```
 
+</details>
+
 ### 6. Удаление сообщения по кнопке (Закрыть пульт)
 Пример того, как можно добавить на пульт кнопку "Закрыть ❌", которая будет физически удалять сообщение из истории чата.
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
 
 ```yaml
 alias: "VK: Закрытие пульта"
@@ -269,8 +297,13 @@ actions:
               conversation_message_id: "{{ trigger.event.data.conversation_message_id }}"
 ```
 
+</details>
+
 ### 7. Самоуничтожающиеся сообщения (Таймер)
 Интеграция автоматически сохраняет внутренний ID последнего отправленного сообщения в атрибут `last_message_id`. Это позволяет создавать сообщения, которые удаляются сами через заданное время, чтобы не засорять чат.
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
 
 ```yaml
 alias: "VK: Уведомление с таймером"
@@ -293,6 +326,8 @@ actions:
       message_id: "{{ state_attr('notify.vk_notify_2000001234', 'last_message_id') }}"
 ```
 
+</details>
+
 ---
 
 ## 🛠 Установка
@@ -313,7 +348,12 @@ actions:
 5. Установите появившуюся интеграцию **VK Notify (Keyboard Edition)**.
 6. Перезагрузите Home Assistant.
 
-<img width="584" height="722" alt="Снимок экрана 2026-04-08 в 10 24 57" src="https://github.com/user-attachments/assets/3b427935-f55f-4a38-b312-996a3b6fa1e2" />
+---
+
+<details>
+  <summary><b>🖼 Скриншоты установки и настройки (Нажмите, чтобы развернуть)</b></summary>
+  <br>
+  <img width="584" height="722" alt="Снимок экрана 2026-04-08 в 10 24 57" src="https://github.com/user-attachments/assets/3b427935-f55f-4a38-b312-996a3b6fa1e2" />
 
 <img width="882" height="798" alt="Снимок экрана 2026-04-08 в 10 29 28" src="https://github.com/user-attachments/assets/5f5f5ad6-a9e8-42df-97f0-8333c94df659" />
 
@@ -321,9 +361,7 @@ actions:
 
 <img width="1011" height="840" alt="Снимок экрана 2026-04-08 в 10 27 48" src="https://github.com/user-attachments/assets/288f2258-0669-43e5-bd22-00ae36a9dcfa" />
 
-
 <img width="582" height="294" alt="Снимок экрана 2026-04-08 в 16 18 00" src="https://github.com/user-attachments/assets/e77dce74-d6d8-4979-9734-74d14952a1c7" />
 
-
 <img width="582" height="294" alt="Снимок экрана 2026-04-08 в 16 17 52" src="https://github.com/user-attachments/assets/4365b34d-f3d4-4761-9469-efa8d51b0f1c" />
-
+</details>
