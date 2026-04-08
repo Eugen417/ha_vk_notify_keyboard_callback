@@ -157,7 +157,6 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             mode = user_input[CONF_MODE]
 
             if mode == MODE_LONGPOLL and not self._group_id:
-                # group_id не удалось определить из токена — Long Poll невозможен
                 errors["base"] = "group_id_required"
             elif mode == MODE_LONGPOLL:
                 ok = await _check_longpoll_access(self.hass, self._access_token, self._group_id)
@@ -198,8 +197,13 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if user_input[CONF_PEER_ID] not in writable_ids:
                 errors[CONF_PEER_ID] = "chat_not_writable"
             else:
+                # --- ТВОЯ МАГИЯ ЗДЕСЬ ---
+                # Формируем красивое название карточки: Имя бота + Имя чата
+                chat_label = all_options[user_input[CONF_PEER_ID]]
+                card_title = f"{self._name}: {chat_label}"
+
                 return self.async_create_entry(
-                    title=self._name,
+                    title=card_title,
                     data={
                         CONF_ACCESS_TOKEN: self._access_token,
                         CONF_PEER_ID: int(user_input[CONF_PEER_ID]),
@@ -228,6 +232,14 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if user_input[CONF_PEER_ID] not in writable_ids:
                 errors[CONF_PEER_ID] = "chat_not_writable"
             else:
+                # --- И ЗДЕСЬ ---
+                # Обновляем заголовок карточки, если ты решил сменить чат
+                chat_label = all_options[user_input[CONF_PEER_ID]]
+                base_name = entry.data.get("name", "VK Notify")
+                self.hass.config_entries.async_update_entry(
+                    entry, title=f"{base_name}: {chat_label}"
+                )
+                
                 return self.async_update_reload_and_abort(
                     entry,
                     data={**entry.data, CONF_PEER_ID: int(user_input[CONF_PEER_ID])},
