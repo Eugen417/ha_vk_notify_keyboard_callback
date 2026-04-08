@@ -128,3 +128,6 @@ action:
 4. Выберите категорию **Integration** и нажмите **Add**.
 5. Установите появившуюся интеграцию **VK Notify (Keyboard Edition)**.
 6. Перезагрузите Home Assistant.
+
+<img width="584" height="209" alt="Снимок экрана 2026-04-08 в 10 09 24" src="https://github.com/user-attachments/assets/55f4bb30-350a-41b8-9d1f-a122809d5de4" />
+
