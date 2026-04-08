@@ -67,7 +67,7 @@ data:
 Эта автоматизация «слушает» нажатия callback-кнопок и выполняет действия на основе данных из `payload`.
 
 ```yaml
-aalias: "Пульт управления светом:"
+alias: "Пульт управления светом:"
 description: ""
 triggers: []
 conditions: []
@@ -116,8 +116,10 @@ mode: single
 alias: "VK: Обработка кнопок пульта"
 description: Реагирует на нажатия callback-кнопок из ВК
 triggers:
-  - event_type: vk_notify_callback
-    trigger: event
+  - trigger: event
+    event_type: vk_notify_callback
+    event_data:
+      peer_id: 2000001234  # <--- Добавляем фильтр сюда
 actions:
   - choose:
       - conditions:
