@@ -144,6 +144,42 @@
           "description": "Необязательный JSON-объект inline-клавиатуры."
         }
       }
+    },
+    "edit_message": {
+      "name": "Редактировать сообщение",
+      "description": "Изменяет текст и клавиатуру ранее отправленного сообщения.",
+      "fields": {
+        "message": {
+          "name": "Текст",
+          "description": "Новый текст сообщения."
+        },
+        "message_id": {
+          "name": "ID сообщения",
+          "description": "Внутренний ID сообщения (если известен)."
+        },
+        "conversation_message_id": {
+          "name": "ID сообщения в беседе",
+          "description": "ID сообщения внутри чата (cmid), доступен при нажатии кнопок."
+        },
+        "keyboard": {
+          "name": "Клавиатура",
+          "description": "Новая клавиатура (необязательно)."
+        }
+      }
+    },
+    "delete_message": {
+      "name": "Удалить сообщение",
+      "description": "Удаляет сообщение у всех участников чата.",
+      "fields": {
+        "message_id": {
+          "name": "ID сообщения",
+          "description": "Внутренний ID сообщения."
+        },
+        "conversation_message_id": {
+          "name": "ID сообщения в беседе",
+          "description": "ID сообщения внутри чата (cmid)."
+        }
+      }
     }
   }
 }
