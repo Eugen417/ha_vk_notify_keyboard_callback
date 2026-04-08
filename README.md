@@ -8,8 +8,8 @@
 
 * **Действие `vk_notify.send_message`**: Расширенный сервис для отправки сообщений с поддержкой JSON-клавиатур.
 * **Динамическое редактирование (`vk_notify.edit_message`)**: Возможность изменять текст и кнопки уже отправленного сообщения в чате (идеально для изменения статусов вкл/выкл).
-* **Удаление сообщений (`vk_notify.delete_message`)**: Удаление сообщений бота у всех участников чата.
-* **Callback-кнопки**: Кнопки, которые при нажатии не отправляют текст в чат, а генерируют скрытое событие внутри Home Assistant (теперь с передачей `conversation_message_id` для редактирования).
+* **Удаление сообщений (`vk_notify.delete_message`)**: Удаление сообщений бота у всех участников чата (вручную или по таймеру).
+* **Callback-кнопки**: Кнопки, которые при нажатии не отправляют текст в чат, а генерируют скрытое событие внутри Home Assistant (с передачей `conversation_message_id` для редактирования или удаления).
 * **Инлайн-клавиатуры**: Кнопки, которые прикрепляются прямо к сообщению, а не висят под полем ввода.
 * **Цветные кнопки**: Поддержка всех 4-х стандартных цветов VK (синий, зеленый, красный, белый).
 * **Умное именование:** Вам больше не нужно придумывать уникальные имена для каждого уведомителя. Интеграция автоматически формирует понятные названия карточек и `entity_id`, добавляя к базовому имени название чата и его `peer_id` (например: *VK Notify: Мой чат (2000012345)*).
@@ -44,7 +44,7 @@
 ```yaml
 action: vk_notify.send_message
 data:
-  entity_id: notify.vk_notify
+  entity_id: notify.vk_notify_2000001234
   message: "Выберите устройство:"
   keyboard:
     inline: true
@@ -103,7 +103,7 @@ actions:
         buttons:
           - - action:
                 type: open_link
-                link: "https://yandex.ru/maps/?pt=37.62,55.75&z=15&l=map"
+                link: "[https://yandex.ru/maps/?pt=37.62,55.75&z=15&l=map](https://yandex.ru/maps/?pt=37.62,55.75&z=15&l=map)"
                 label: "Открыть карту 📍"
 mode: single
 ```
@@ -242,6 +242,55 @@ actions:
                               color: >-
                                 {% if is_state('light.double_switch_2_2_3', 'on') %}negative
                                 {% else %}positive{% endif %}
+```
+
+### 6. Удаление сообщения по кнопке (Закрыть пульт)
+Пример того, как можно добавить на пульт кнопку "Закрыть ❌", которая будет физически удалять сообщение из истории чата.
+
+```yaml
+alias: "VK: Закрытие пульта"
+description: "Удаляет сообщение с пультом при нажатии на кнопку закрытия"
+triggers:
+  - trigger: event
+    event_type: vk_notify_callback
+    event_data:
+      peer_id: 2000001234
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            # Предполагается, что на пульте есть кнопка с payload: '{"action": "close_remote"}'
+            value_template: "{{ trigger.event.data.payload.action == 'close_remote' }}"
+        sequence:
+          - action: vk_notify.delete_message
+            data:
+              entity_id: notify.vk_notify_2000001234
+              # Берем ID сообщения прямо из клика по кнопке
+              conversation_message_id: "{{ trigger.event.data.conversation_message_id }}"
+```
+
+### 7. Самоуничтожающиеся сообщения (Таймер)
+Интеграция автоматически сохраняет внутренний ID последнего отправленного сообщения в атрибут `last_message_id`. Это позволяет создавать сообщения, которые удаляются сами через заданное время, чтобы не засорять чат.
+
+```yaml
+alias: "VK: Уведомление с таймером"
+description: "Отправляет статус и удаляет его через час"
+actions:
+  # 1. Отправляем сообщение
+  - action: vk_notify.send_message
+    data:
+      entity_id: notify.vk_notify_2000001234
+      message: "👕 Стиральная машина закончила стирку!"
+      
+  # 2. Ждем 1 час
+  - delay: "01:00:00"
+  
+  # 3. Удаляем именно то сообщение, которое отправили час назад
+  - action: vk_notify.delete_message
+    data:
+      entity_id: notify.vk_notify_2000001234
+      # Берем внутренний ID последнего отправленного сообщения из атрибутов
+      message_id: "{{ state_attr('notify.vk_notify_2000001234', 'last_message_id') }}"
 ```
 
 ---
