@@ -67,22 +67,66 @@ data:
 Эта автоматизация «слушает» нажатия callback-кнопок и выполняет действия на основе данных из `payload`.
 
 ```yaml
-alias: "VK: Обработчик пульта"
-trigger:
-  - platform: event
-    event_type: vk_notify_callback
-action:
+aalias: "Пульт управления светом:"
+description: ""
+triggers: []
+conditions: []
+actions:
+  - action: vk_notify.send_message
+    data:
+      entity_id: notify.vk_notify_2000001234
+      message: "🎛 Пульт управления светом:"
+      keyboard:
+        inline: true
+        buttons:
+          - - action:
+                type: callback
+                label: Переключить свет 💡
+                payload: "{\"action\": \"toggle_light\"}"
+              color: primary
+          - - action:
+                type: callback
+                label: Включить всё ☀️
+                payload: "{\"action\": \"all_on\"}"
+              color: positive
+            - action:
+                type: callback
+                label: Выключить всё 🌑
+                payload: "{\"action\": \"all_off\"}"
+              color: negative
+  - action: vk_notify.send_message
+    data:
+      entity_id: notify.vk_notify_2000001234
+      message: "Нажми на кнопку, чтобы увидеть объект на карте:"
+      keyboard:
+        inline: true
+        buttons:
+          - - action:
+                type: open_link
+                link: https://yandex.ru/maps/?pt=37.62,55.75&z=15&l=map
+                label: Открыть карту 📍
+mode: single
+
+```
+
+### 3. Реакция на текстовые команды
+Если вы нажали кнопку типа `text` или написали сообщение со слэшем (например, `/start`).
+
+```yaml
+alias: "VK: Обработка кнопок пульта"
+description: Реагирует на нажатия callback-кнопок из ВК
+triggers:
+  - event_type: vk_notify_callback
+    trigger: event
+actions:
   - choose:
-      # Логика для переключателя света
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.payload.action == 'toggle' }}"
+            value_template: "{{ trigger.event.data.payload.action == 'toggle_light' }}"
         sequence:
           - action: light.toggle
             target:
-              entity_id: "{{ trigger.event.data.payload.item }}"
-
-      # Логика для выключения всего света
+              entity_id: light.double_switch_2_2_3
       - conditions:
           - condition: template
             value_template: "{{ trigger.event.data.payload.action == 'all_off' }}"
@@ -90,23 +134,7 @@ action:
           - action: light.turn_off
             target:
               entity_id: all
-```
-
-### 3. Реакция на текстовые команды
-Если вы нажали кнопку типа `text` или написали сообщение со слэшем (например, `/start`).
-
-```yaml
-alias: "VK: Команда старт"
-trigger:
-  - platform: event
-    event_type: vk_notify_command
-    event_data:
-      command: "start"
-action:
-  - action: vk_notify.send_message
-    data:
-      entity_id: "{{ trigger.event.data.entity_id }}"
-      message: "Бот готов! Используйте кнопки или команды для управления домом."
+mode: parallel
 ```
 
 ---
