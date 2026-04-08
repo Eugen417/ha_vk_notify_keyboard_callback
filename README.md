@@ -37,7 +37,7 @@
 ## 📖 Примеры использования
 
 ### 1. Отправка пульта управления (Action)
-Используйте этот код в любой автоматизации, чтобы отправить интерактивное меню.
+Используйте этот код в любой автоматизации, чтобы отправить интерактивное меню с кнопками. Обратите внимание, что кнопки могут быть разных типов: `callback` (скрытая отправка данных) и `text` (отправка текста в чат).
 
 ```yaml
 action: vk_notify.send_message
@@ -63,14 +63,12 @@ data:
           color: secondary
 ```
 
-### 2. Обработка нажатий (Trigger)
-Эта автоматизация «слушает» нажатия callback-кнопок и выполняет действия на основе данных из `payload`.
+### 2. Продвинутая клавиатура (Цвета и ссылки)
+Пример отправки сразу двух сообщений: одно с разноцветными кнопками, а второе — с кнопкой типа `open_link`, которая открывает нужный URL-адрес без отправки сообщений боту.
 
 ```yaml
-alias: "Пульт управления светом:"
-description: ""
-triggers: []
-conditions: []
+alias: "Пульт управления светом и картой"
+description: "Отправка сообщений с разными типами кнопок"
 actions:
   - action: vk_notify.send_message
     data:
@@ -81,18 +79,18 @@ actions:
         buttons:
           - - action:
                 type: callback
-                label: Переключить свет 💡
-                payload: "{\"action\": \"toggle_light\"}"
+                label: "Переключить свет 💡"
+                payload: '{"action": "toggle_light"}'
               color: primary
           - - action:
                 type: callback
-                label: Включить всё ☀️
-                payload: "{\"action\": \"all_on\"}"
+                label: "Включить всё ☀️"
+                payload: '{"action": "all_on"}'
               color: positive
             - action:
                 type: callback
-                label: Выключить всё 🌑
-                payload: "{\"action\": \"all_off\"}"
+                label: "Выключить всё 🌑"
+                payload: '{"action": "all_off"}'
               color: negative
   - action: vk_notify.send_message
     data:
@@ -103,23 +101,22 @@ actions:
         buttons:
           - - action:
                 type: open_link
-                link: https://yandex.ru/maps/?pt=37.62,55.75&z=15&l=map
-                label: Открыть карту 📍
+                link: "[https://yandex.ru/maps/?pt=37.62,55.75&z=15&l=map](https://yandex.ru/maps/?pt=37.62,55.75&z=15&l=map)"
+                label: "Открыть карту 📍"
 mode: single
-
 ```
 
-### 3. Реакция на текстовые команды
-Если вы нажали кнопку типа `text` или написали сообщение со слэшем (например, `/start`).
+### 3. Обработка нажатий (Trigger)
+Эта автоматизация «слушает» невидимые нажатия `callback`-кнопок из примеров выше и выполняет действия в Home Assistant на основе данных из поля `payload`.
 
 ```yaml
 alias: "VK: Обработка кнопок пульта"
-description: Реагирует на нажатия callback-кнопок из ВК
+description: "Реагирует на нажатия callback-кнопок из ВК"
 triggers:
   - trigger: event
     event_type: vk_notify_callback
     event_data:
-      peer_id: 2000001234  # <--- Добавляем фильтр сюда
+      peer_id: 2000001234  # <--- Фильтр: реагировать только на нажатия в этом чате
 actions:
   - choose:
       - conditions:
@@ -137,6 +134,26 @@ actions:
             target:
               entity_id: all
 mode: parallel
+```
+
+### 4. Реакция на текстовые команды
+Если вы нажали кнопку типа `text` или просто написали в чат сообщение со слэшем (например, `/status`), Home Assistant сгенерирует событие `vk_notify_command`. Вот как на него ответить:
+
+```yaml
+alias: "VK: Реакция на текстовые команды"
+description: "Отвечает на команду /status"
+triggers:
+  - trigger: event
+    event_type: vk_notify_command
+    event_data:
+      command: status  # <--- Указываем команду без слэша
+      peer_id: 2000001234
+actions:
+  - action: vk_notify.send_message
+    data:
+      entity_id: notify.vk_notify_2000001234
+      message: "🟢 Все системы работают в штатном режиме!"
+mode: single
 ```
 
 ---
