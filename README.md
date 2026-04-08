@@ -364,4 +364,8 @@ actions:
 <img width="582" height="294" alt="Снимок экрана 2026-04-08 в 16 18 00" src="https://github.com/user-attachments/assets/e77dce74-d6d8-4979-9734-74d14952a1c7" />
 
 <img width="582" height="294" alt="Снимок экрана 2026-04-08 в 16 17 52" src="https://github.com/user-attachments/assets/4365b34d-f3d4-4761-9469-efa8d51b0f1c" />
+
+https://github.com/user-attachments/assets/e257553f-e171-4935-a5c5-afb8dddb018f
+
+
 </details>
