@@ -90,6 +90,10 @@
         "message": {
           "name": "Caption",
           "description": "Optional caption for the file."
+        },
+        "keyboard": {
+          "name": "Keyboard",
+          "description": "Optional JSON object for inline keyboard."
         }
       }
     },
@@ -112,6 +116,68 @@
         "message": {
           "name": "Caption",
           "description": "Optional caption for the photo."
+        },
+        "keyboard": {
+          "name": "Keyboard",
+          "description": "Optional JSON object for inline keyboard."
+        }
+      }
+    },
+    "send_message": {
+      "name": "Send message",
+      "description": "Send a text message via VK.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity to send through."
+        },
+        "message": {
+          "name": "Message",
+          "description": "Text of the message."
+        },
+        "title": {
+          "name": "Title",
+          "description": "Optional title (added as the first line)."
+        },
+        "keyboard": {
+          "name": "Keyboard",
+          "description": "Optional JSON object for inline keyboard."
+        }
+      }
+    },
+    "edit_message": {
+      "name": "Edit message",
+      "description": "Edits the text and keyboard of a previously sent message.",
+      "fields": {
+        "message": {
+          "name": "Message",
+          "description": "New text of the message."
+        },
+        "message_id": {
+          "name": "Message ID",
+          "description": "Internal message ID (if known)."
+        },
+        "conversation_message_id": {
+          "name": "Conversation Message ID",
+          "description": "Message ID within the chat (cmid), available when clicking buttons."
+        },
+        "keyboard": {
+          "name": "Keyboard",
+          "description": "New keyboard (optional)."
+        }
+      }
+    },
+    "delete_message": {
+      "name": "Delete message",
+      "description": "Deletes a message for all chat participants.",
+      "fields": {
+        "message_id": {
+          "name": "Message ID",
+          "description": "Internal message ID."
+        },
+        "conversation_message_id": {
+          "name": "Conversation Message ID",
+          "description": "Message ID within the chat (cmid)."
         }
       }
     }
