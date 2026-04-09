@@ -1,77 +1,166 @@
-wall_post:
+send_message:
+  name: "Отправить сообщение"
+  description: "Отправляет текстовое уведомление и возвращает его идентификаторы."
+  response:
+    optional: true
   fields:
     entity_id:
+      name: "Цель уведомления"
+      description: "Выберите сущность ВК."
       required: true
       selector:
         entity:
           integration: vk_notify
           domain: notify
     message:
-      selector:
-        text:
-          multiline: true
-    file:
-      selector:
-        text:
-
-send_file:
-  fields:
-    entity_id:
-      required: true
-      selector:
-        entity:
-          integration: vk_notify
-          domain: notify
-    file:
+      name: "Сообщение"
+      description: "Основной текст уведомления."
       required: true
       selector:
         text:
-    message:
+          multiline: true
+    title:
+      name: "Заголовок"
+      description: "Заголовок сообщения."
       selector:
         text:
-          multiline: true
     keyboard:
+      name: "Клавиатура"
+      description: "Объект клавиатуры в формате JSON."
       selector:
         object: {}
 
 send_photo:
+  name: "Отправить фото"
+  description: "Отправляет изображение по ссылке или локальному пути."
+  response:
+    optional: true
   fields:
     entity_id:
+      name: "Цель уведомления"
       required: true
       selector:
         entity:
           integration: vk_notify
           domain: notify
     url:
+      name: "URL изображения"
+      description: "Прямая ссылка на фото в сети."
       selector:
         text:
     file:
+      name: "Путь к файлу"
+      description: "Локальный путь к файлу на сервере HA."
       selector:
         text:
     message:
+      name: "Подпись"
+      description: "Текст под фотографией."
       selector:
         text:
           multiline: true
     keyboard:
+      name: "Клавиатура"
       selector:
         object: {}
 
-send_message:
+send_file:
+  name: "Отправить файл (документ)"
+  description: "Загружает и отправляет файл как документ ВК."
+  response:
+    optional: true
   fields:
     entity_id:
+      name: "Цель уведомления"
+      required: true
+      selector:
+        entity:
+          integration: vk_notify
+          domain: notify
+    file:
+      name: "Путь к файлу"
+      required: true
+      selector:
+        text:
+    message:
+      name: "Сообщение"
+      selector:
+        text:
+          multiline: true
+    keyboard:
+      name: "Клавиатура"
+      selector:
+        object: {}
+
+wall_post:
+  name: "Пост на стену"
+  description: "Создает запись на стене пользователя или сообщества."
+  response:
+    optional: true
+  fields:
+    entity_id:
+      name: "Цель уведомления"
       required: true
       selector:
         entity:
           integration: vk_notify
           domain: notify
     message:
+      name: "Текст поста"
+      selector:
+        text:
+          multiline: true
+    file:
+      name: "Прикрепленный файл"
+      selector:
+        text:
+
+edit_message:
+  name: "Редактировать сообщение"
+  description: "Изменяет текст или клавиатуру уже отправленного сообщения."
+  fields:
+    entity_id:
+      name: "Цель уведомления"
+      required: true
+      selector:
+        entity:
+          integration: vk_notify
+          domain: notify
+    message:
+      name: "Новый текст"
       required: true
       selector:
         text:
           multiline: true
-    title:
+    message_id:
+      name: "Глобальный ID"
+      selector:
+        text:
+    conversation_message_id:
+      name: "ID в беседе (cmid)"
       selector:
         text:
     keyboard:
+      name: "Новая клавиатура"
       selector:
         object: {}
+
+delete_message:
+  name: "Удалить сообщение"
+  description: "Удаляет сообщение для всех участников чата."
+  fields:
+    entity_id:
+      name: "Цель уведомления"
+      required: true
+      selector:
+        entity:
+          integration: vk_notify
+          domain: notify
+    message_id:
+      name: "Глобальный ID"
+      selector:
+        text:
+    conversation_message_id:
+      name: "ID в беседе (cmid)"
+      selector:
+        text:
