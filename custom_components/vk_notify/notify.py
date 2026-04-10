@@ -1,5 +1,5 @@
 """
-VK Notify (Keyboard Edition) v1.0.3
+VK Notify (Keyboard Edition) v1.0.2
 Custom component for Home Assistant
 
 Описание:
