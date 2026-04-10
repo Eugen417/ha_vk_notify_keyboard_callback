@@ -328,6 +328,145 @@ actions:
 
 </details>
 
+## Новые возможности начиная с версии v1.0.3
+
+<details>
+  <summary><b>📖 Как использовать новые функции в YAML (начиная с версии v1.0.3 )</b></summary>
+  
+
+#### 1. Имитация бурной деятельности («Бот печатает...»)
+Отлично подходит для скриптов, которые парсят данные или ждут ответа от железки (например, твоего ИБП). Бот будет показывать статус активности в течение 10 секунд.
+
+```yaml
+action: vk_notify.set_activity
+data:
+  entity_id: notify.vk_notify_2000001234
+  type: typing # или 'audiomsg', если бот "записывает голосовое"
+```
+
+#### 2. Реакции (Лайки) на сообщения
+Чтобы бот не засорял чат ответами "ОК, выключил", он может просто поставить лайк на твою команду. 
+*(Коды реакций VK: 1 = 👍, 2 = 👎, 3 = ❤️, 4 = 🔥 и т.д.)*
+
+```yaml
+action: vk_notify.send_reaction
+data:
+  entity_id: notify.vk_notify_2000001234
+  conversation_message_id: "{{ trigger.event.data.conversation_message_id }}" # ID твоего сообщения из триггера
+  reaction_id: 1 # Ставим лайк 👍
+```
+
+#### 3. Геометки (Отправка координат)
+Бот пришлет интерактивную карту прямо в чат.
+
+```yaml
+action: vk_notify.send_message
+data:
+  entity_id: notify.vk_notify_2000001234
+  message: "📍 Автомобиль припаркован здесь:"
+  lat: "55.751244"
+  long: "37.618423"
+```
+
+#### 4. Карусель (Шаблоны)
+Отправка красивых горизонтальных карточек. В нашем случае, мы добавили поддержку ключа `template` в стандартную службу `send_message`.
+
+```yaml
+action: vk_notify.send_message
+data:
+  entity_id: notify.vk_notify_2000001234 # Укажи свой ID
+  message: "💡 Выберите сценарий освещения для гостиной:"
+  template:
+    type: carousel
+    elements:
+      # Карточка 1
+      - title: "Вечерний отдых 🌙"
+        description: "Приглушенный теплый свет (30%)"
+        buttons:
+          - action:
+              type: callback
+              label: "Включить"
+              payload: '{"action": "set_scene", "scene": "evening"}'
+            color: primary # Синяя кнопка
+      
+      # Карточка 2
+      - title: "Яркий свет ☀️"
+        description: "Максимальная яркость (100%)"
+        buttons:
+          - action:
+              type: callback
+              label: "Включить"
+              payload: '{"action": "set_scene", "scene": "bright"}'
+            color: positive # Зеленая кнопка
+      
+      # Карточка 3
+      - title: "Режим кино 🍿"
+        description: "Выключить основной свет, оставить подсветку ТВ"
+        buttons:
+          - action:
+              type: callback
+              label: "Включить"
+              payload: '{"action": "set_scene", "scene": "movie"}'
+            color: secondary # Серая кнопка
+```
+
+```yaml
+action: vk_notify.send_message
+data:
+  entity_id: notify.vk_notify_2000001234
+  message: "🎬 Выберите фильм для просмотра:"
+  template:
+    type: carousel
+    elements:
+      - title: "Интерстеллар"
+        description: "Фантастика, 2014"
+        photo_id: "-123456_7890" # Нужно заранее загрузить фото в ВК
+        buttons:
+          - action:
+              type: callback
+              label: "▶️ Включить на Plex"
+              payload: '{"action": "play_movie", "id": "1"}'
+      - title: "Дюна"
+        description: "Фантастика, 2021"
+        buttons:
+          - action:
+              type: callback
+              label: "▶️ Включить на Plex"
+              payload: '{"action": "play_movie", "id": "2"}'
+```
+
+#### 5. Закрепление сообщения
+Например, можно отправить главное меню с кнопками и сразу прибить его гвоздями к верху чата.
+
+```yaml
+# Сначала отправляем сообщение и получаем ответ
+- action: vk_notify.send_message
+  data:
+    entity_id: notify.vk_notify_2000001234
+    message: "🎛 Главный пульт управления домом"
+    # ... тут твоя клавиатура ...
+  response_variable: msg_response
+
+# Затем закрепляем это сообщение
+- action: vk_notify.pin_message
+  data:
+    entity_id: notify.vk_notify_2000001234
+    conversation_message_id: "{{ (msg_response.values() | first).conversation_message_id }}"
+```
+
+#### 6. Голосовые сообщения
+Добавлена отдельная служба `send_voice`. Передай ей локальный путь к файлу `.ogg`.
+
+```yaml
+action: vk_notify.send_voice
+data:
+  entity_id: notify.vk_notify_2000001234
+  file: "/config/www/audio/alarm.ogg"
+```
+*(Небольшая ремарка по аудио: чтобы оно отображалось именно как «волна», а не как прикрепленный файл-документ, твой файл `helpers.py` должен уметь запрашивать у ВКонтакте сервер для загрузки именно голосовых сообщений `docs.getMessagesUploadServer?type=audio_message`. Если он этого не умеет, ВК всё равно примет файл, но покажет его просто как аудио-документ).*
+
+</details>
+
 ---
 
 ## 🛠 Установка
