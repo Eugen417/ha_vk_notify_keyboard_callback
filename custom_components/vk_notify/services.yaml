@@ -1,6 +1,7 @@
 send_message:
   name: "Отправить сообщение"
-  description: "Отправляет текстовое уведомление и возвращает его идентификаторы."
+  description: "Отправляет текстовое уведомление, координаты или карусель, и возвращает идентификаторы."
+  icon: mdi:send
   response:
     optional: true
   fields:
@@ -29,10 +30,26 @@ send_message:
       description: "Объект клавиатуры в формате JSON."
       selector:
         object: {}
+    template:
+      name: "Карусель (Шаблон)"
+      description: "JSON-объект с карточками для карусели (вместо обычной клавиатуры)."
+      selector:
+        object: {}
+    lat:
+      name: "Широта (Геометка)"
+      description: "Координата широты (например, 55.751244)."
+      selector:
+        text:
+    long:
+      name: "Долгота (Геометка)"
+      description: "Координата долготы (например, 37.618423)."
+      selector:
+        text:
 
 send_photo:
   name: "Отправить фото"
   description: "Отправляет изображение по ссылке или локальному пути."
+  icon: mdi:camera
   response:
     optional: true
   fields:
@@ -67,6 +84,7 @@ send_photo:
 send_file:
   name: "Отправить файл (документ)"
   description: "Загружает и отправляет файл как документ ВК."
+  icon: mdi:file-document
   response:
     optional: true
   fields:
@@ -95,6 +113,7 @@ send_file:
 wall_post:
   name: "Пост на стену"
   description: "Создает запись на стене пользователя или сообщества."
+  icon: mdi:newspaper-variant-outline
   response:
     optional: true
   fields:
@@ -118,6 +137,7 @@ wall_post:
 edit_message:
   name: "Редактировать сообщение"
   description: "Изменяет текст или клавиатуру уже отправленного сообщения."
+  icon: mdi:pencil
   fields:
     entity_id:
       name: "Цель уведомления"
@@ -148,6 +168,7 @@ edit_message:
 delete_message:
   name: "Удалить сообщение"
   description: "Удаляет сообщение для всех участников чата."
+  icon: mdi:delete
   fields:
     entity_id:
       name: "Цель уведомления"
@@ -164,3 +185,109 @@ delete_message:
       name: "ID в беседе (cmid)"
       selector:
         text:
+
+# ==========================================
+# НОВЫЕ ФУНКЦИИ v3.0 ULTIMATE EDITION
+# ==========================================
+
+set_activity:
+  name: "Статус активности (Печатает...)"
+  description: "Отображает статус набора текста или записи аудио в чате на 10 секунд."
+  icon: mdi:chat-processing
+  fields:
+    entity_id:
+      name: "Цель уведомления"
+      required: true
+      selector:
+        entity:
+          integration: vk_notify
+          domain: notify
+    type:
+      name: "Тип активности"
+      description: "Что бот сейчас делает?"
+      required: true
+      selector:
+        select:
+          options:
+            - label: "Печатает текст (typing)"
+              value: "typing"
+            - label: "Записывает аудио (audiomsg)"
+              value: "audiomsg"
+
+send_reaction:
+  name: "Отправить реакцию (Лайк)"
+  description: "Ставит реакцию на конкретное сообщение (без отправки нового текста)."
+  icon: mdi:emoticon-happy-outline
+  fields:
+    entity_id:
+      name: "Цель уведомления"
+      required: true
+      selector:
+        entity:
+          integration: vk_notify
+          domain: notify
+    conversation_message_id:
+      name: "ID сообщения (cmid)"
+      description: "ID сообщения в беседе, на которое нужно поставить реакцию."
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 2147483647
+          mode: box
+    reaction_id:
+      name: "Тип реакции (ID)"
+      description: "1 = 👍, 2 = 👎, 3 = ❤️, 4 = 🔥, 8 = 🥱, и т.д."
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: box
+
+pin_message:
+  name: "Закрепить сообщение"
+  description: "Закрепляет указанное сообщение в шапке диалога."
+  icon: mdi:pin
+  fields:
+    entity_id:
+      name: "Цель уведомления"
+      required: true
+      selector:
+        entity:
+          integration: vk_notify
+          domain: notify
+    message_id:
+      name: "Глобальный ID"
+      selector:
+        text:
+    conversation_message_id:
+      name: "ID в беседе (cmid)"
+      selector:
+        text:
+
+send_voice:
+  name: "Отправить голосовое сообщение"
+  description: "Отправляет аудиофайл (.ogg) как голосовое сообщение."
+  icon: mdi:microphone
+  response:
+    optional: true
+  fields:
+    entity_id:
+      name: "Цель уведомления"
+      required: true
+      selector:
+        entity:
+          integration: vk_notify
+          domain: notify
+    file:
+      name: "Путь к аудиофайлу"
+      description: "Локальный путь к файлу .ogg (например: /config/www/alert.ogg)."
+      required: true
+      selector:
+        text:
+    message:
+      name: "Текст (необязательно)"
+      selector:
+        text:
+          multiline: true
