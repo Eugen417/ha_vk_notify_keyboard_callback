@@ -189,33 +189,42 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_select_chat(self, user_input=None):
         errors = {}
-        all_options, writable_ids = await _get_conversations(self.hass, self._access_token)
+        all_options, _ = await _get_conversations(self.hass, self._access_token)
 
-        if not all_options:
-            errors["base"] = "no_conversations"
-        elif user_input is not None:
-            if user_input[CONF_PEER_ID] not in writable_ids:
-                errors[CONF_PEER_ID] = "chat_not_writable"
-            else:
-                # --- ТВОЯ МАГИЯ ЗДЕСЬ ---
-                # Формируем красивое название карточки: Имя бота + Имя чата
-                chat_label = all_options[user_input[CONF_PEER_ID]]
-                card_title = f"{self._name}: {chat_label}"
+        if user_input is not None:
+            peer_id_str = str(user_input[CONF_PEER_ID]).strip()
+            
+            # Подхватываем имя, если чат есть в списке, иначе просто пишем ID
+            chat_label = all_options.get(peer_id_str, f"Чат {peer_id_str}")
+            card_title = f"{self._name}: {chat_label}"
 
-                return self.async_create_entry(
-                    title=card_title,
-                    data={
-                        CONF_ACCESS_TOKEN: self._access_token,
-                        CONF_PEER_ID: int(user_input[CONF_PEER_ID]),
-                        CONF_MODE: self._mode,
-                        CONF_GROUP_ID: self._group_id,
-                        "name": self._name,
-                    },
-                )
+            return self.async_create_entry(
+                title=card_title,
+                data={
+                    CONF_ACCESS_TOKEN: self._access_token,
+                    CONF_PEER_ID: int(peer_id_str),
+                    CONF_MODE: self._mode,
+                    CONF_GROUP_ID: self._group_id,
+                    "name": self._name,
+                },
+            )
+
+        # Подготавливаем опции для выпадающего списка
+        options = [{"value": str(k), "label": v} for k, v in all_options.items()]
 
         return self.async_show_form(
             step_id="select_chat",
-            data_schema=vol.Schema({vol.Required(CONF_PEER_ID): vol.In(all_options)}),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_PEER_ID): SelectSelector(
+                        SelectSelectorConfig(
+                            options=options,
+                            custom_value=True, # РАЗРЕШАЕТ РУЧНОЙ ВВОД!
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                }
+            ),
             errors=errors,
         )
 
@@ -224,31 +233,36 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._access_token = entry.data[CONF_ACCESS_TOKEN]
 
         errors = {}
-        all_options, writable_ids = await _get_conversations(self.hass, self._access_token)
+        all_options, _ = await _get_conversations(self.hass, self._access_token)
 
-        if not all_options:
-            errors["base"] = "no_conversations"
-        elif user_input is not None:
-            if user_input[CONF_PEER_ID] not in writable_ids:
-                errors[CONF_PEER_ID] = "chat_not_writable"
-            else:
-                # --- И ЗДЕСЬ ---
-                # Обновляем заголовок карточки, если ты решил сменить чат
-                chat_label = all_options[user_input[CONF_PEER_ID]]
-                base_name = entry.data.get("name", "VK Notify")
-                self.hass.config_entries.async_update_entry(
-                    entry, title=f"{base_name}: {chat_label}"
-                )
-                
-                return self.async_update_reload_and_abort(
-                    entry,
-                    data={**entry.data, CONF_PEER_ID: int(user_input[CONF_PEER_ID])},
-                )
+        if user_input is not None:
+            peer_id_str = str(user_input[CONF_PEER_ID]).strip()
+            
+            chat_label = all_options.get(peer_id_str, f"Чат {peer_id_str}")
+            base_name = entry.data.get("name", "VK Notify")
+            self.hass.config_entries.async_update_entry(
+                entry, title=f"{base_name}: {chat_label}"
+            )
+            
+            return self.async_update_reload_and_abort(
+                entry,
+                data={**entry.data, CONF_PEER_ID: int(peer_id_str)},
+            )
+
+        options = [{"value": str(k), "label": v} for k, v in all_options.items()]
 
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=vol.Schema(
-                {vol.Required(CONF_PEER_ID, default=str(entry.data[CONF_PEER_ID])): vol.In(all_options)}
+                {
+                    vol.Required(CONF_PEER_ID, default=str(entry.data[CONF_PEER_ID])): SelectSelector(
+                        SelectSelectorConfig(
+                            options=options,
+                            custom_value=True, # РАЗРЕШАЕТ РУЧНОЙ ВВОД ПРИ ПЕРЕНАСТРОЙКЕ!
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                }
             ),
             errors=errors,
         )
