@@ -1,12 +1,6 @@
 """
-VK Notify (Keyboard Edition) v1.0.2
-Custom component for Home Assistant
-
-Описание:
-Поддерживает отправку, редактирование и удаление сообщений, посты на стену,
-отправку фото, файлов, аудио, а также статусы активности, реакции и геометки.
-
-Репозиторий: https://github.com/Eugen417/ha_vk_notify_keyboard_callback
+VK Notify (Keyboard Edition) v1.0.4
+Bulletproof response parsing for messages.send
 """
 from __future__ import annotations
 
@@ -27,7 +21,6 @@ from homeassistant.helpers import entity_platform
 from .const import CONF_ACCESS_TOKEN, CONF_PEER_ID, VK_API_VERSION
 from .helpers import async_upload_file
 
-# Эндпоинты API VK
 VK_API_SEND = "https://api.vk.com/method/messages.send"
 VK_API_EDIT = "https://api.vk.com/method/messages.edit"
 VK_API_DELETE = "https://api.vk.com/method/messages.delete"
@@ -35,42 +28,26 @@ VK_API_WALL = "https://api.vk.com/method/wall.post"
 VK_API_ACTIVITY = "https://api.vk.com/method/messages.setActivity"
 VK_API_REACTION = "https://api.vk.com/method/messages.sendReaction"
 VK_API_PIN = "https://api.vk.com/method/messages.pin"
+VK_API_USERS_GET = "https://api.vk.com/method/users.get"
+VK_API_MESSAGES_EDIT_CHAT = "https://api.vk.com/method/messages.editChat"
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     async_add_entities([VkNotifyEntity(hass, entry)])
     platform = entity_platform.async_get_current_platform()
 
-    # --- СТАРЫЕ СЛУЖБЫ (Текст, Фото, Файлы, Стена, Редактирование, Удаление) ---
-    platform.async_register_entity_service("send_message", {vol.Required("message"): cv.string, vol.Optional("title"): cv.string, vol.Optional("keyboard"): dict, vol.Optional("template"): dict, vol.Optional("lat"): cv.string, vol.Optional("long"): cv.string, vol.Optional("data"): dict}, "async_send_message", supports_response=SupportsResponse.OPTIONAL)
-    platform.async_register_entity_service("send_photo", {vol.Optional("url"): cv.string, vol.Optional("file"): cv.string, vol.Optional("message"): cv.string, vol.Optional("keyboard"): dict}, "async_send_photo", supports_response=SupportsResponse.OPTIONAL)
-    platform.async_register_entity_service("send_file", {vol.Required("file"): cv.string, vol.Optional("message"): cv.string, vol.Optional("keyboard"): dict}, "async_send_file", supports_response=SupportsResponse.OPTIONAL)
+    platform.async_register_entity_service("send_message", {vol.Required("message"): cv.string, vol.Optional("title"): cv.string, vol.Optional("keyboard"): dict, vol.Optional("template"): dict, vol.Optional("lat"): cv.string, vol.Optional("long"): cv.string, vol.Optional("reply_to"): cv.positive_int}, "async_send_message", supports_response=SupportsResponse.OPTIONAL)
+    platform.async_register_entity_service("send_photo", {vol.Optional("url"): cv.string, vol.Optional("file"): cv.string, vol.Optional("message"): cv.string, vol.Optional("keyboard"): dict, vol.Optional("reply_to"): cv.positive_int}, "async_send_photo", supports_response=SupportsResponse.OPTIONAL)
+    platform.async_register_entity_service("send_file", {vol.Required("file"): cv.string, vol.Optional("message"): cv.string, vol.Optional("keyboard"): dict, vol.Optional("reply_to"): cv.positive_int}, "async_send_file", supports_response=SupportsResponse.OPTIONAL)
     platform.async_register_entity_service("wall_post", {vol.Optional("message"): cv.string, vol.Optional("file"): cv.string}, "async_wall_post", supports_response=SupportsResponse.OPTIONAL)
-    platform.async_register_entity_service("edit_message", {vol.Required("message"): cv.string, vol.Optional("message_id"): cv.positive_int, vol.Optional("conversation_message_id"): cv.positive_int, vol.Optional("keyboard"): dict, vol.Optional("attachment"): cv.string}, "async_edit_message")
+    platform.async_register_entity_service("edit_message", {vol.Required("message"): cv.string, vol.Optional("message_id"): cv.positive_int, vol.Optional("conversation_message_id"): cv.positive_int, vol.Optional("keyboard"): dict}, "async_edit_message")
     platform.async_register_entity_service("delete_message", {vol.Optional("message_id"): cv.positive_int, vol.Optional("conversation_message_id"): cv.positive_int}, "async_delete_message")
-
-    # --- НОВЫЕ СЛУЖБЫ (v3.0) ---
-    platform.async_register_entity_service(
-        "set_activity",
-        {vol.Required("type"): vol.In(["typing", "audiomsg"])},
-        "async_set_activity"
-    )
-    platform.async_register_entity_service(
-        "send_reaction",
-        {vol.Required("conversation_message_id"): cv.positive_int, vol.Required("reaction_id"): cv.positive_int},
-        "async_send_reaction"
-    )
-    platform.async_register_entity_service(
-        "pin_message",
-        {vol.Optional("message_id"): cv.positive_int, vol.Optional("conversation_message_id"): cv.positive_int},
-        "async_pin_message"
-    )
-    platform.async_register_entity_service(
-        "send_voice",
-        {vol.Required("file"): cv.string, vol.Optional("message"): cv.string},
-        "async_send_voice",
-        supports_response=SupportsResponse.OPTIONAL
-    )
-
+    platform.async_register_entity_service("set_activity", {vol.Required("type"): vol.In(["typing", "audiomsg"])}, "async_set_activity")
+    platform.async_register_entity_service("send_reaction", {vol.Required("conversation_message_id"): cv.positive_int, vol.Required("reaction_id"): cv.positive_int}, "async_send_reaction")
+    platform.async_register_entity_service("pin_message", {vol.Optional("message_id"): cv.positive_int, vol.Optional("conversation_message_id"): cv.positive_int}, "async_pin_message")
+    platform.async_register_entity_service("send_voice", {vol.Required("file"): cv.string, vol.Optional("message"): cv.string}, "async_send_voice", supports_response=SupportsResponse.OPTIONAL)
+    platform.async_register_entity_service("send_sticker", {vol.Required("sticker_id"): cv.positive_int, vol.Optional("reply_to"): cv.positive_int}, "async_send_sticker", supports_response=SupportsResponse.OPTIONAL)
+    platform.async_register_entity_service("edit_chat", {vol.Required("title"): cv.string}, "async_edit_chat")
+    platform.async_register_entity_service("get_user_info", {vol.Required("user_id"): vol.Any(cv.positive_int, cv.string)}, "async_get_user_info", supports_response=SupportsResponse.ONLY)
 
 class VkNotifyEntity(NotifyEntity):
     _attr_supported_features = NotifyEntityFeature.TITLE
@@ -81,11 +58,10 @@ class VkNotifyEntity(NotifyEntity):
         self._access_token: str = entry.data[CONF_ACCESS_TOKEN]
         self._peer_id: int = entry.data[CONF_PEER_ID]
         self._last_message_id: int | None = None
-        self._last_cmid: int | None = None 
+        self._last_cmid: int | None = None
         self._attr_unique_id = entry.entry_id
         base_name = entry.data.get("name", "VK Notify")
         self._attr_name = f"{base_name} {self._peer_id}"
-        self._attr_extra_state_attributes = {"peer_id": self._peer_id, "last_message_id": None, "last_cmid": None}
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -96,7 +72,7 @@ class VkNotifyEntity(NotifyEntity):
         params["access_token"] = self._access_token
         params["v"] = VK_API_VERSION
         if endpoint == VK_API_SEND:
-            params["peer_ids"] = self._peer_id
+            params["peer_id"] = self._peer_id
             params["random_id"] = random.randint(0, 2**31)
 
         try:
@@ -104,23 +80,43 @@ class VkNotifyEntity(NotifyEntity):
                 res = await resp.json()
                 if "error" in res: raise HomeAssistantError(f"VK API Error: {res['error']}")
                 if endpoint == VK_API_SEND and "response" in res:
-                    msg_info = res["response"][0]
-                    self._last_message_id = msg_info.get("message_id")
-                    self._last_cmid = msg_info.get("conversation_message_id")
+                    msg_info = res["response"]
+                    
+                    # --- ПУЛЕНЕПРОБИВАЕМАЯ ПРОВЕРКА ОТВЕТА ВК ---
+                    if isinstance(msg_info, list) and len(msg_info) > 0:
+                        msg_info = msg_info[0] # Если пришел список [12345] или [{...}], достаем элемент
+                    
+                    if isinstance(msg_info, int):
+                        self._last_message_id = msg_info
+                        self._last_cmid = None
+                    elif isinstance(msg_info, dict):
+                        self._last_message_id = msg_info.get("message_id") or msg_info.get("id")
+                        self._last_cmid = msg_info.get("conversation_message_id")
+                        
                     self.async_write_ha_state()
                     return {"message_id": self._last_message_id, "conversation_message_id": self._last_cmid}
                 return res.get("response")
         except Exception as e: raise HomeAssistantError(f"Connection Error: {e}")
 
-    # --- БАЗОВЫЕ МЕТОДЫ ---
+    def _prepare_reply(self, params: dict, reply_to: int | None) -> None:
+        if not reply_to: return
+        if self._peer_id >= 2000000000:
+            params["forward"] = json.dumps({
+                "peer_id": self._peer_id,
+                "conversation_message_ids": [reply_to],
+                "is_reply": 1
+            }, ensure_ascii=False)
+        else:
+            params["reply_to"] = reply_to
+
     async def async_send_message(self, message: str, title: str | None = None, **kwargs) -> ServiceResponse:
         if title: message = f"{title}\n{message}"
         params = {"message": message}
         if "keyboard" in kwargs: params["keyboard"] = json.dumps(kwargs["keyboard"], ensure_ascii=False)
         if "template" in kwargs: params["template"] = json.dumps(kwargs["template"], ensure_ascii=False)
         if "lat" in kwargs and "long" in kwargs:
-            params["lat"] = kwargs["lat"]
-            params["long"] = kwargs["long"]
+            params["lat"], params["long"] = kwargs["lat"], kwargs["long"]
+        self._prepare_reply(params, kwargs.get("reply_to"))
         return await self._internal_send(VK_API_SEND, params)
 
     async def async_send_photo(self, **kwargs) -> ServiceResponse:
@@ -128,15 +124,17 @@ class VkNotifyEntity(NotifyEntity):
         params = {"message": kwargs.get("message", "")}
         if path: params["attachment"] = await async_upload_file(self.hass, self._access_token, self._peer_id, path)
         if kwargs.get("keyboard"): params["keyboard"] = json.dumps(kwargs["keyboard"], ensure_ascii=False)
+        self._prepare_reply(params, kwargs.get("reply_to"))
         return await self._internal_send(VK_API_SEND, params)
 
     async def async_send_file(self, **kwargs) -> ServiceResponse:
         params = {"message": kwargs.get("message", ""), "attachment": await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])}
         if kwargs.get("keyboard"): params["keyboard"] = json.dumps(kwargs["keyboard"], ensure_ascii=False)
+        self._prepare_reply(params, kwargs.get("reply_to"))
         return await self._internal_send(VK_API_SEND, params)
 
     async def async_wall_post(self, **kwargs) -> ServiceResponse:
-        params = {"owner_id": self._peer_id, "message": kwargs.get("message", "")}
+        params = {"owner_id": f"-{self.hass.data['vk_notify'][self._entry.entry_id]['data']['group_id']}", "message": kwargs.get("message", "")}
         if kwargs.get("file"): params["attachments"] = await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])
         return await self._internal_send(VK_API_WALL, params)
 
@@ -144,8 +142,7 @@ class VkNotifyEntity(NotifyEntity):
         params = {"peer_id": self._peer_id, "message": message}
         if kwargs.get("message_id"): params["message_id"] = kwargs["message_id"]
         elif kwargs.get("conversation_message_id"): params["conversation_message_id"] = kwargs["conversation_message_id"]
-        if "keyboard" in kwargs and kwargs["keyboard"] is not None: params["keyboard"] = json.dumps(kwargs["keyboard"], ensure_ascii=False)
-        if kwargs.get("attachment"): params["attachment"] = kwargs["attachment"]
+        if "keyboard" in kwargs: params["keyboard"] = json.dumps(kwargs["keyboard"], ensure_ascii=False)
         await self._internal_send(VK_API_EDIT, params)
 
     async def async_delete_message(self, **kwargs) -> None:
@@ -154,27 +151,45 @@ class VkNotifyEntity(NotifyEntity):
         if kwargs.get("conversation_message_id"): params["cmids"] = kwargs["conversation_message_id"]
         await self._internal_send(VK_API_DELETE, params)
 
-    # --- НОВЫЕ МЕТОДЫ (v3.0) ---
     async def async_set_activity(self, type: str, **kwargs) -> None:
-        """Отправляет статус 'Печатает...' или 'Записывает аудио'."""
-        params = {"peer_id": self._peer_id, "type": type}
-        await self._internal_send(VK_API_ACTIVITY, params)
+        await self._internal_send(VK_API_ACTIVITY, {"peer_id": self._peer_id, "type": type})
 
     async def async_send_reaction(self, conversation_message_id: int, reaction_id: int, **kwargs) -> None:
-        """Ставит реакцию на конкретное сообщение."""
-        params = {"peer_id": self._peer_id, "cmid": conversation_message_id, "reaction_id": reaction_id}
-        await self._internal_send(VK_API_REACTION, params)
+        await self._internal_send(VK_API_REACTION, {"peer_id": self._peer_id, "cmid": conversation_message_id, "reaction_id": reaction_id})
 
     async def async_pin_message(self, **kwargs) -> None:
-        """Закрепляет сообщение в чате."""
         params = {"peer_id": self._peer_id}
         if kwargs.get("message_id"): params["message_id"] = kwargs["message_id"]
         elif kwargs.get("conversation_message_id"): params["conversation_message_id"] = kwargs["conversation_message_id"]
         await self._internal_send(VK_API_PIN, params)
 
     async def async_send_voice(self, **kwargs) -> ServiceResponse:
-        """Отправляет голосовое сообщение (аудио)."""
-        # Внимание: для идеальной работы helpers.py должен поддерживать загрузку с type='audio_message'
-        # Но как базовый вариант, мы загружаем его как документ.
-        params = {"message": kwargs.get("message", ""), "attachment": await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])}
+        params = {"attachment": await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"]), "message": kwargs.get("message", "")}
         return await self._internal_send(VK_API_SEND, params)
+
+    async def async_send_sticker(self, sticker_id: int, **kwargs) -> ServiceResponse:
+        params = {"sticker_id": sticker_id}
+        self._prepare_reply(params, kwargs.get("reply_to"))
+        return await self._internal_send(VK_API_SEND, params)
+
+    async def async_edit_chat(self, title: str, **kwargs) -> None:
+        if self._peer_id < 2000000000: raise HomeAssistantError("edit_chat only for groups")
+        await self._internal_send(VK_API_MESSAGES_EDIT_CHAT, {"chat_id": self._peer_id - 2000000000, "title": title})
+
+    async def async_get_user_info(self, user_id: int | str, **kwargs) -> ServiceResponse:
+        uid_str = str(user_id).replace("[VK ID: ", "").replace("]", "").strip()
+        uid_int = int(uid_str) if uid_str.lstrip('-').isdigit() else 0
+        if not uid_int or uid_int >= 2000000000: return {"full_name": "Система", "is_online": False}
+        session = async_get_clientsession(self.hass)
+        try:
+            async with session.post(VK_API_USERS_GET, data={"user_ids": str(uid_int), "fields": "online,last_seen", "lang": "ru", "v": VK_API_VERSION, "access_token": self._access_token}) as resp:
+                res = await resp.json()
+                if "response" in res and res["response"]:
+                    u = res["response"][0]
+                    return {
+                        "full_name": f"{u.get('first_name', '')} {u.get('last_name', '')}".strip(),
+                        "is_online": bool(u.get("online", 0)),
+                        "last_seen": u.get("last_seen", {}).get("time", 0)
+                    }
+        except Exception: pass
+        return {"full_name": "Неизвестно", "is_online": False, "last_seen": 0}
