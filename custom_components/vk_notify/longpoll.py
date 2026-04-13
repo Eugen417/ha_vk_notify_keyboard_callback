@@ -81,17 +81,29 @@ class VkLongPollManager:
         upd_type = update.get("type")
         obj = update.get("object", {})
 
-        # --- ОБРАБОТКА ТЕКСТА ---
+        # --- ОБРАБОТКА ТЕКСТА (СООБЩЕНИЯ И КОМАНДЫ) ---
         if upd_type == "message_new":
             message = obj.get("message", {})
             text = message.get("text", "")
             peer_id = message.get("peer_id")
+            from_id = message.get("from_id")
+            cmid = message.get("conversation_message_id")
+            
             ent_id = self._find_entity_id(peer_id)
             if not ent_id: return
 
-            base = {"peer_id": peer_id, "entity_id": ent_id, "text": text}
+            base = {
+                "peer_id": peer_id, 
+                "entity_id": ent_id, 
+                "text": text,
+                "from_id": from_id,
+                "conversation_message_id": cmid
+            }
+            
             if text.startswith("/"):
-                self._hass.bus.async_fire(f"{DOMAIN}_command", {**base, "command": text.split()[0][1:]})
+                cmd_parts = text.split()
+                command = cmd_parts[0][1:] if cmd_parts else ""
+                self._hass.bus.async_fire(f"{DOMAIN}_command", {**base, "command": command})
             else:
                 self._hass.bus.async_fire(f"{DOMAIN}_text", base)
             
@@ -104,28 +116,57 @@ class VkLongPollManager:
             event_id = obj.get("event_id")
             payload = obj.get("payload", {})
 
-            # Декодируем payload если это строка
             if isinstance(payload, str):
                 try: payload = json.loads(payload)
                 except: pass
 
             ent_id = self._find_entity_id(peer_id)
-            _LOGGER.debug("VK Callback received: peer=%s, event=%s, payload=%s", peer_id, event_id, payload)
-
             if ent_id:
-                # ВАЖНО: Добавили получение и передачу conversation_message_id
                 self._hass.bus.async_fire(
                     f"{DOMAIN}_callback", 
                     {
                         "payload": payload, 
                         "peer_id": peer_id, 
                         "entity_id": ent_id,
+                        "user_id": user_id,
                         "conversation_message_id": obj.get("conversation_message_id")
                     }
                 )
 
-            # СРОЧНЫЙ ОТВЕТ СЕРВЕРУ VK (чтобы колесо не крутилось)
             self._hass.async_create_task(self._answer_callback(event_id, user_id, peer_id))
+
+        # --- ДОБАВЛЕНО: СТАТУС НАБОРА ТЕКСТА ---
+        elif upd_type == "message_typing_state":
+            # ВК присылает from_id. Для бота в личке from_id = peer_id
+            peer_id = obj.get("from_id")
+            ent_id = self._find_entity_id(peer_id)
+            
+            if ent_id:
+                self._hass.bus.async_fire(
+                    f"{DOMAIN}_typing",
+                    {
+                        "peer_id": peer_id,
+                        "entity_id": ent_id,
+                        "user_id": obj.get("from_id"),
+                        "state": obj.get("state", "typing")
+                    }
+                )
+
+        # --- ДОБАВЛЕНО: ПРОЧИТАННОСТЬ СООБЩЕНИЙ ---
+        elif upd_type == "message_read":
+            peer_id = obj.get("peer_id")
+            ent_id = self._find_entity_id(peer_id)
+            
+            if ent_id:
+                self._hass.bus.async_fire(
+                    f"{DOMAIN}_read",
+                    {
+                        "peer_id": peer_id,
+                        "entity_id": ent_id,
+                        "user_id": obj.get("from_id", peer_id),
+                        "read_message_id": obj.get("read_message_id")
+                    }
+                )
 
     async def _answer_callback(self, event_id, user_id, peer_id):
         session = async_get_clientsession(self._hass)
@@ -135,8 +176,6 @@ class VkLongPollManager:
                 data={"access_token": self._access_token, "event_id": event_id, "user_id": user_id, "peer_id": peer_id, "v": VK_API_VERSION}
             ) as resp:
                 res = await resp.json()
-                if "error" in res:
-                    _LOGGER.error("VK Answer Error: %s", res["error"])
         except Exception as e:
             _LOGGER.error("Failed to stop VK spinner: %s", e)
 
