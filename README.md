@@ -376,6 +376,131 @@ actions:
 
 </details>
 
+### 8. Пинг-Понг (Ответ на конкретное сообщение)
+Простая автоматизация для проверки связи. Бот реагирует на слово «пинг» в чате и отправляет ответ, цитируя (реплая) исходное сообщение пользователя через параметр `reply_to`.
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
+
+```yaml
+alias: "VK Тест 5: Реплай (Пинг-Понг)"
+description: "Бот отвечает на конкретное сообщение пользователя"
+mode: parallel
+triggers:
+  - trigger: event
+    event_type: vk_notify_command
+conditions:
+  - condition: template
+    value_template: |-
+      {{ 'пинг' in trigger.event.data.get('command', '') | lower or 
+         'ping' in trigger.event.data.get('text', '') | lower }}
+actions:
+  - action: vk_notify.send_message
+    data:
+      entity_id: notify.vk_notify_2000001234
+      message: 🏓 Понг! Бот на связи и умеет отвечать на сообщения.
+      reply_to: "{{ trigger.event.data.get('conversation_message_id') }}"
+```
+
+</details>
+
+### 9. Шпион (Проверка статуса по заданному ID)
+Возвращает имя, статус онлайна и время последнего визита пользователя по жестко заданному `user_id`. Используется сервис `get_user_info`, возвращающий данные через `response_variable`.
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
+
+```yaml
+alias: "VK Тест 3: Шпион (Проверка онлайна выбранного пользователя)"
+description: "Возвращает имя, статус онлайна и время визита по жестко заданному ID"
+mode: parallel
+triggers:
+  - trigger: event
+    event_type: vk_notify_command
+conditions:
+  - condition: template
+    value_template: >-
+      {{ 'онлайн' in trigger.event.data.get('command', '') | lower or 'онлайн'
+      in trigger.event.data.get('text', '') | lower }}
+actions:
+  - action: vk_notify.get_user_info
+    data:
+      entity_id: notify.vk_notify_2000001234
+      user_id: "1234567"  # замените на нужный VK ID
+    response_variable: vk_user
+  - variables:
+      info: "{{ vk_user.values() | first | default({}) }}"
+      is_online: "{{ info.get('is_online', false) }}"
+      status_text: "{{ '🟢 В сети' if is_online else '⚫ Не в сети' }}"
+      ts: "{{ info.get('last_seen', 0) | int }}"
+      last_seen_text: |-
+        {% if is_online %}
+          Прямо сейчас!
+        {% elif ts > 0 %}
+          {{ ts | timestamp_custom('%d.%m.%Y в %H:%M', true) }}
+        {% else %}
+          Скрыто настройками приватности
+        {% endif %}
+  - action: vk_notify.send_message
+    data:
+      entity_id: notify.vk_notify_2000001234
+      message: |
+        🕵️‍♂️ **Досье пользователя:**
+        👤 Имя: {{ info.get('full_name', 'Неизвестно') }}
+        📱 Статус: {{ status_text }}
+        🕒 Был(а) в сети: {{ last_seen_text }}
+      reply_to: "{{ trigger.event.data.get('conversation_message_id', 0) }}"
+```
+
+</details>
+
+### 10. Динамический Шпион (Кто написал команду?)
+Улучшенная версия «Шпиона». Бот автоматически определяет статус того человека, который отправил команду, используя `from_id` из данных события.
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
+
+```yaml
+alias: "VK Тест 3: Шпион (Динамический с временем)"
+mode: parallel
+triggers:
+  - trigger: event
+    event_type: vk_notify_command
+conditions:
+  - condition: template
+    value_template: "{{ 'онлайн' in trigger.event.data.get('command', '') | lower }}"
+actions:
+  - action: vk_notify.get_user_info
+    data:
+      entity_id: notify.vk_notify_2000001234
+      user_id: "{{ trigger.event.data.from_id }}"
+    response_variable: vk_user
+  - variables:
+      info: "{{ vk_user.values() | first | default({}) }}"
+      is_online: "{{ info.get('is_online', false) }}"
+      status: "{{ '🟢 В сети' if is_online else '⚫ Не в сети' }}"
+      ts: "{{ info.get('last_seen', 0) | int }}"
+      last_seen_text: |-
+        {% if is_online %}
+          Прямо сейчас!
+        {% elif ts > 0 %}
+          {{ ts | timestamp_custom('%d.%m.%Y в %H:%M', true) }}
+        {% else %}
+          Скрыто настройками приватности
+        {% endif %}
+  - action: vk_notify.send_message
+    data:
+      entity_id: notify.vk_notify_2000001234
+      message: |
+        🕵️‍♂️ **Результат пробива:**
+        👤 Имя: {{ info.get('full_name', 'Неизвестно') }}
+        📱 Статус: {{ status }}
+        🕒 Был(а) в сети: {{ last_seen_text }}
+      reply_to: "{{ trigger.event.data.conversation_message_id | default(0) }}"
+```
+
+</details>
+
 ## Новые возможности начиная с версии v1.0.2
 
 <details>
