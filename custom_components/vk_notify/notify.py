@@ -1,5 +1,5 @@
 """
-VK Notify (Keyboard Edition) v1.0.4
+VK Notify (Keyboard Edition) v1.0.4fix
 Bulletproof response parsing for messages.send
 """
 from __future__ import annotations
@@ -84,7 +84,7 @@ class VkNotifyEntity(NotifyEntity):
                     
                     # --- ПУЛЕНЕПРОБИВАЕМАЯ ПРОВЕРКА ОТВЕТА ВК ---
                     if isinstance(msg_info, list) and len(msg_info) > 0:
-                        msg_info = msg_info[0] # Если пришел список [12345] или [{...}], достаем элемент
+                        msg_info = msg_info[0] 
                     
                     if isinstance(msg_info, int):
                         self._last_message_id = msg_info
@@ -92,6 +92,24 @@ class VkNotifyEntity(NotifyEntity):
                     elif isinstance(msg_info, dict):
                         self._last_message_id = msg_info.get("message_id") or msg_info.get("id")
                         self._last_cmid = msg_info.get("conversation_message_id")
+                        
+                    # ==============================================================
+                    # ИСПРАВЛЕНИЕ: Запрашиваем conversation_message_id у ВК API
+                    # ==============================================================
+                    if self._last_message_id and not self._last_cmid:
+                        try:
+                            get_params = {
+                                "access_token": self._access_token,
+                                "v": VK_API_VERSION,
+                                "message_ids": self._last_message_id
+                            }
+                            async with session.post("https://api.vk.com/method/messages.getById", data=get_params) as get_resp:
+                                get_res = await get_resp.json()
+                                if "response" in get_res and get_res["response"].get("items"):
+                                    self._last_cmid = get_res["response"]["items"][0].get("conversation_message_id")
+                        except Exception as e:
+                            pass # Игнорируем ошибку, чтобы не сломать саму отправку
+                    # ==============================================================
                         
                     self.async_write_ha_state()
                     return {"message_id": self._last_message_id, "conversation_message_id": self._last_cmid}
