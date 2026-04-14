@@ -346,23 +346,32 @@ actions:
 
 ```yaml
 alias: "VK: Уведомление с таймером"
-description: "Отправляет статус и удаляет его через час"
+description: Отправляет статус и безопасно удаляет ИМЕННО ЕГО через час
+triggers:
+  - entity_id: switch.washing_machine
+    to: "off"
+    trigger: state
 actions:
-  # 1. Отправляем сообщение
   - action: vk_notify.send_message
     data:
       entity_id: notify.vk_notify_2000001234
-      message: "👕 Стиральная машина закончила стирку!"
-      
-  # 2. Ждем 1 час
-  - delay: "01:00:00"
-  
-  # 3. Удаляем именно то сообщение, которое отправили час назад
-  - action: vk_notify.delete_message
-    data:
-      entity_id: notify.vk_notify_2000001234
-      # Берем внутренний ID последнего отправленного сообщения из атрибутов
-      message_id: "{{ state_attr('notify.vk_notify_2000001234', 'last_message_id') }}"
+      message: 👕 Стиральная машина закончила стирку!
+    response_variable: sent_result
+  - delay: "00:00:15"
+  - variables:
+      bot_msg_id: >-
+        {{ (sent_result.values() | first | default({})).get('message_id', 0) |
+        int }}
+  - if:
+      - condition: template
+        value_template: "{{ bot_msg_id > 0 }}"
+    then:
+      - action: vk_notify.delete_message
+        data:
+          entity_id: notify.vk_notify_2000001234
+          message_id: "{{ bot_msg_id }}"
+        continue_on_error: true
+
 ```
 
 </details>
