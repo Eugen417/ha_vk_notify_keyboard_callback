@@ -1,5 +1,5 @@
 """
-VK Notify (Keyboard Edition) v1.0.4fix
+VK Notify (Keyboard Edition) v1.0.5
 Bulletproof response parsing for messages.send
 """
 from __future__ import annotations
