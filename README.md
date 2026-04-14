@@ -501,6 +501,67 @@ actions:
 
 </details>
 
+### 11. Двусторонняя связь (Тестовый пример)
+Наглядная автоматизация для проверки событий `vk_notify_typing` (набор текста) и `vk_notify_read` (прочтение). 
+
+⚠️ **ВАЖНОЕ ОГРАНИЧЕНИЕ VK API:** События о прочтении сообщений (`vk_notify_read`) работают **только в личных диалогах с ботом**. ВКонтакте не отправляет ботам статусы прочтения из общих бесед. Тестируйте эту автоматизацию в диалоге тет-а-тет с вашим сообществом!
+
+*Внимание: для реакции на «прочтение» мы специально используем внутреннее уведомление Home Assistant (`persistent_notification`), чтобы не создать бесконечную петлю в ВК (бот пишет -> вы читаете -> бот снова пишет).*
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
+
+```yaml
+alias: "VK Тест 6: Двусторонняя связь (Тайпинг и Прочтение)"
+description: >-
+  Демонстрация реакции бота на ваши действия в чате (только для личных
+  сообщений)
+triggers:
+  - trigger: event
+    event_type: vk_notify_typing
+    id: typing
+  - trigger: event
+    event_type: vk_notify_read
+    id: read
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: typing
+        sequence:
+          - action: vk_notify.send_message
+            data:
+              entity_id: notify.vk_notify_2000000008 # <-- Ваш личный VK ID(Бота), а не ID чата!
+              message: 👀 О, вижу, ты что-то печатаешь! Жду команду...
+          - delay: "00:00:10"
+      - conditions:
+          - condition: trigger
+            id:
+              - read
+              - typing
+        sequence:
+          - action: persistent_notification.create
+            data:
+              title: ВКонтакте (VK Notify)
+              message: Пользователь только что прочитал ваши сообщения! ✔️✔️
+          - delay: "00:00:10"
+mode: single
+              
+      # --- ВЕТКА 2: ЧТО ДЕЛАТЬ, ЕСЛИ ПОЛЬЗОВАТЕЛЬ ПРОЧИТАЛ ---
+      - conditions:
+          - condition: trigger
+            id: "read"
+        sequence:
+          # Отправляем уведомление в панель самого Home Assistant (колокольчик слева внизу)
+          - action: persistent_notification.create
+            data:
+              title: "ВКонтакте (VK Notify)"
+              message: "Пользователь только что прочитал ваши сообщения! ✔️✔️"
+          - delay: "00:00:10"
+```
+
+</details>
+
 ---
 
 ## Новые возможности начиная с версии v1.0.2
