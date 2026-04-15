@@ -59,19 +59,19 @@
   "services": {
     "wall_post": {
       "name": "Post to wall",
-      "description": "Publish a post on the VK community wall. Returns post_id that can be used with wall_edit.",
+      "description": "Publish a post on the VK community wall. Returns post_id.",
       "fields": {
         "entity_id": {
           "name": "Entity",
-          "description": "VK Notify entity (determines which community to post to)."
+          "description": "VK Notify entity."
         },
         "message": {
-          "name": "Message",
+          "name": "Post text",
           "description": "Text of the post."
         },
         "file": {
-          "name": "File",
-          "description": "Local path to a document to attach. OGG files are not supported."
+          "name": "Local file path",
+          "description": "Local path to a photo to attach."
         }
       }
     },
@@ -81,19 +81,31 @@
       "fields": {
         "entity_id": {
           "name": "Entity",
-          "description": "VK Notify entity to send through."
+          "description": "VK Notify entity."
         },
         "file": {
-          "name": "File",
-          "description": "Local file path. The path must be listed in allowlist_external_dirs. OGG files are sent as voice messages. MP3 and executable files are not supported."
+          "name": "Local file path",
+          "description": "Local file path to send."
         },
         "message": {
           "name": "Caption",
           "description": "Optional caption for the file."
         },
+        "disable_mentions": {
+          "name": "Silent mentions",
+          "description": "Disables only the specific mention push (@id). Note: The standard new message notification will still arrive unless the chat is muted."
+        },
+        "payload": {
+          "name": "Hidden data (Payload)",
+          "description": "Invisible data string returned to the bot upon reply or forward."
+        },
         "keyboard": {
           "name": "Keyboard",
-          "description": "Optional JSON object for inline keyboard."
+          "description": "JSON object for inline or regular keyboard."
+        },
+        "reply_to": {
+          "name": "Reply to message",
+          "description": "Message ID (cmid) in the chat to reply to."
         }
       }
     },
@@ -103,67 +115,119 @@
       "fields": {
         "entity_id": {
           "name": "Entity",
-          "description": "VK Notify entity to send through."
-        },
-        "url": {
-          "name": "URL",
-          "description": "URL of the photo to send. Mutually exclusive with file."
-        },
-        "file": {
-          "name": "File",
-          "description": "Local file path of the photo. The path must be listed in allowlist_external_dirs. Mutually exclusive with url."
+          "description": "VK Notify entity."
         },
         "message": {
           "name": "Caption",
-          "description": "Optional caption for the photo."
+          "description": "Optional text below the photo."
+        },
+        "file": {
+          "name": "Local file path",
+          "description": "E.g., /config/www/image.jpg"
+        },
+        "url": {
+          "name": "Image URL",
+          "description": "Direct URL to the image."
+        },
+        "disable_mentions": {
+          "name": "Silent mentions",
+          "description": "Disables only the specific mention push (@id). Note: The standard new message notification will still arrive unless the chat is muted."
+        },
+        "payload": {
+          "name": "Hidden data (Payload)",
+          "description": "Invisible data string returned to the bot upon reply or forward."
         },
         "keyboard": {
           "name": "Keyboard",
-          "description": "Optional JSON object for inline keyboard."
+          "description": "JSON object for inline or regular keyboard."
+        },
+        "reply_to": {
+          "name": "Reply to message",
+          "description": "Message ID (cmid) in the chat to reply to."
         }
       }
     },
     "send_message": {
       "name": "Send message",
-      "description": "Send a text message via VK.",
+      "description": "Sends a text notification, media, coordinates, or carousel.",
       "fields": {
         "entity_id": {
           "name": "Entity",
-          "description": "VK Notify entity to send through."
-        },
-        "message": {
-          "name": "Message",
-          "description": "Text of the message."
+          "description": "VK Notify entity."
         },
         "title": {
           "name": "Title",
-          "description": "Optional title (added as the first line)."
+          "description": "Optional title. Added as the first line before the message."
+        },
+        "message": {
+          "name": "Message",
+          "description": "Main notification text. Supports emojis and line breaks."
+        },
+        "attachment": {
+          "name": "Attachment (Media)",
+          "description": "Ready-made media string from VK, e.g., photo123_456 or doc-789_012."
+        },
+        "disable_mentions": {
+          "name": "Silent mentions",
+          "description": "Disables only the specific mention push (@id). Note: The standard new message notification will still arrive unless the chat is muted."
         },
         "keyboard": {
           "name": "Keyboard",
-          "description": "Optional JSON object for inline keyboard."
+          "description": "JSON object for inline or regular keyboard."
+        },
+        "template": {
+          "name": "Template / Carousel",
+          "description": "JSON object for the carousel. Per VK API requirements, it must contain 'type': 'carousel' and an 'elements' array (max 10 items)."
+        },
+        "payload": {
+          "name": "Hidden data (Payload)",
+          "description": "Invisible data string returned to the bot upon reply or forward."
+        },
+        "lat": {
+          "name": "Latitude",
+          "description": "Latitude coordinate for geolocation."
+        },
+        "long": {
+          "name": "Longitude",
+          "description": "Longitude coordinate for geolocation."
+        },
+        "reply_to": {
+          "name": "Reply to message",
+          "description": "Message ID (cmid) in the chat to reply to."
         }
       }
     },
     "edit_message": {
       "name": "Edit message",
-      "description": "Edits the text and keyboard of a previously sent message.",
+      "description": "Edits the text, keyboard, and attachments of a previously sent message.",
       "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity."
+        },
         "message": {
-          "name": "Message",
+          "name": "New message text",
           "description": "New text of the message."
         },
         "message_id": {
-          "name": "Message ID",
+          "name": "Message ID (Private)",
           "description": "Internal message ID (if known)."
         },
         "conversation_message_id": {
           "name": "Conversation Message ID",
-          "description": "Message ID within the chat (cmid), available when clicking buttons."
+          "description": "Message ID within the chat (cmid)."
+        },
+        "attachment": {
+          "name": "New attachment",
+          "description": "Media string (photo123_456). Pass an empty string to remove the attachment."
         },
         "keyboard": {
-          "name": "Keyboard",
+          "name": "New keyboard",
           "description": "New keyboard (optional)."
+        },
+        "disable_mentions": {
+          "name": "Silent mentions",
+          "description": "Disables only the specific mention push (@id). Note: The standard new message notification will still arrive unless the chat is muted."
         }
       }
     },
@@ -171,13 +235,127 @@
       "name": "Delete message",
       "description": "Deletes a message for all chat participants.",
       "fields": {
-        "message_id": {
-          "name": "Message ID",
-          "description": "Internal message ID."
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity."
         },
         "conversation_message_id": {
           "name": "Conversation Message ID",
           "description": "Message ID within the chat (cmid)."
+        }
+      }
+    },
+    "set_activity": {
+      "name": "Set activity status",
+      "description": "Shows typing or recording audio status in the chat.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity."
+        },
+        "type": {
+          "name": "Activity type",
+          "description": "typing or audiomsg."
+        }
+      }
+    },
+    "send_reaction": {
+      "name": "Send reaction",
+      "description": "Sets an emoji reaction to a specific message.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity."
+        },
+        "conversation_message_id": {
+          "name": "Conversation Message ID",
+          "description": "Message ID in the chat to react to."
+        },
+        "reaction_id": {
+          "name": "Reaction",
+          "description": "Choose an emotion."
+        }
+      }
+    },
+    "pin_message": {
+      "name": "Pin message",
+      "description": "Pins the specified message in the chat.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity."
+        },
+        "conversation_message_id": {
+          "name": "Conversation Message ID",
+          "description": "Message ID within the chat (cmid)."
+        }
+      }
+    },
+    "send_voice": {
+      "name": "Send voice message",
+      "description": "Sends an audio file (.ogg) as a native voice message.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity."
+        },
+        "file": {
+          "name": "Local audio path",
+          "description": "Local path to the .ogg file on the HA server."
+        },
+        "message": {
+          "name": "Text",
+          "description": "Text to be sent alongside the audio."
+        },
+        "disable_mentions": {
+          "name": "Silent mentions",
+          "description": "Disables only the specific mention push (@id). Note: The standard new message notification will still arrive unless the chat is muted."
+        },
+        "payload": {
+          "name": "Hidden data (Payload)",
+          "description": "Invisible data string returned to the bot upon reply or forward."
+        },
+        "keyboard": {
+          "name": "Keyboard",
+          "description": "JSON object for inline or regular keyboard."
+        },
+        "reply_to": {
+          "name": "Reply to message",
+          "description": "Message ID (cmid) in the chat to reply to."
+        }
+      }
+    },
+    "edit_chat": {
+      "name": "Edit chat title",
+      "description": "Changes the title of a group chat (Bot must be an admin!).",
+      "fields": {
+        "title": {
+          "name": "New title",
+          "description": "Supports emojis."
+        }
+      }
+    },
+    "get_user_info": {
+      "name": "Get user info",
+      "description": "Requests user data. Returns First Name, Last Name, and Online status.",
+      "fields": {
+        "user_id": {
+          "name": "VK User ID",
+          "description": "Numeric User ID (or from_id from an event)."
+        }
+      }
+    },
+    "send_sticker": {
+      "name": "Send sticker",
+      "description": "Sends a VK sticker by its internal ID.",
+      "fields": {
+        "sticker_id": {
+          "name": "Sticker ID",
+          "description": "Sequence number of the sticker (e.g., 3 for Spotty dog)."
+        },
+        "reply_to": {
+          "name": "Reply to message",
+          "description": "Message ID (cmid) in the chat to reply to."
         }
       }
     }
