@@ -39,8 +39,8 @@ send_message:
       selector:
         object:
     template:
-      name: Карусель (Карточки)
-      description: JSON-объект карточек карусели с картинками и кнопками.
+      name: Шаблон / Карусель (Template)
+      description: "JSON-объект карусели. По требованиям VK API должен содержать параметр 'type': 'carousel' и массив карточек 'elements' (не более 10 штук)."
       required: false
       selector:
         object:
