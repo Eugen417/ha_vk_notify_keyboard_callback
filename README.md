@@ -12,6 +12,26 @@
 
 ---
 
+## 🛠 Установка
+
+
+### Через HACS
+
+[![Открыть в Home Assistant и установить VK Notify через HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Eugen417&repository=ha_vk_notify_keyboard_callback&category=integration)
+
+Если кнопка не работает: добавьте репозиторий в HACS вручную (категория: Интеграция), установите "VK Notify (Keyboard Edition)" и перезапустите Home Assistant.
+
+### Вручную (без HACS)
+
+1. Откройте **HACS** > **Integrations**.
+2. Нажмите три точки в верхнем правом углу > **Custom repositories**.
+3. Вставьте ссылку на ваш репозиторий: `https://github.com/Eugen417/ha_vk_notify_keyboard_callback`
+4. Выберите категорию **Integration** и нажмите **Add**.
+5. Установите появившуюся интеграцию **VK Notify (Keyboard Edition)**.
+6. Перезагрузите Home Assistant.
+   
+---
+
 ## 🚀 Что нового в этой версии (Основные возможности)
 
 * **Действие vk_notify.send_message:** Расширенный сервис для отправки сообщений с поддержкой JSON-клавиатур, шаблонов и геометок.
@@ -730,26 +750,6 @@ data:
 *(Небольшая ремарка по аудио: чтобы оно отображалось именно как «волна», а не как прикрепленный файл-документ, твой файл `helpers.py` должен уметь запрашивать у ВКонтакте сервер для загрузки именно голосовых сообщений `docs.getMessagesUploadServer?type=audio_message`. Если он этого не умеет, ВК всё равно примет файл, но покажет его просто как аудио-документ).*
 
 </details>
-
----
-
-## 🛠 Установка
-
-
-### Через HACS
-
-[![Открыть в Home Assistant и установить VK Notify через HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Eugen417&repository=ha_vk_notify_keyboard_callback&category=integration)
-
-Если кнопка не работает: добавьте репозиторий в HACS вручную (категория: Интеграция), установите "VK Notify (Keyboard Edition)" и перезапустите Home Assistant.
-
-### Вручную (без HACS)
-
-1. Откройте **HACS** > **Integrations**.
-2. Нажмите три точки в верхнем правом углу > **Custom repositories**.
-3. Вставьте ссылку на ваш репозиторий: `https://github.com/Eugen417/ha_vk_notify_keyboard_callback`
-4. Выберите категорию **Integration** и нажмите **Add**.
-5. Установите появившуюся интеграцию **VK Notify (Keyboard Edition)**.
-6. Перезагрузите Home Assistant.
 
 ---
 
