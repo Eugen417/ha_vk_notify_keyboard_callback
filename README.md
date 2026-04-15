@@ -404,27 +404,28 @@ actions:
 </details>
 
 ### 8. Пинг-Понг (Ответ на конкретное сообщение)
-Простая автоматизация для проверки связи. Бот реагирует на слово «пинг» в чате и отправляет ответ, цитируя (реплая) исходное сообщение пользователя через параметр `reply_to`.
+Простая автоматизация для проверки связи. Бот реагирует на команды «/пинг» «/ping» в чате и отправляет ответ, цитируя (реплая) исходное сообщение пользователя через параметр `reply_to`.
 
 <details>
   <summary><b>👨‍💻 Показать код YAML</b></summary>
 
 ```yaml
 alias: "VK Тест 5: Реплай (Пинг-Понг)"
-description: "Бот отвечает на конкретное сообщение пользователя"
+description: Бот отвечает только на команду /пинг или /ping в любом регистре
 mode: parallel
-triggers:
-  - trigger: event
+trigger:
+  - platform: event
     event_type: vk_notify_command
-conditions:
+    event_data:
+      entity_id: notify.vk_notify_2000000003
+condition:
   - condition: template
-    value_template: |-
-      {{ 'пинг' in trigger.event.data.get('command', '') | lower or 
-         'ping' in trigger.event.data.get('text', '') | lower }}
-actions:
+    value_template: >-
+      {{ trigger.event.data.get('command', '') | lower in ['пинг', 'ping'] }}
+action:
   - action: vk_notify.send_message
     data:
-      entity_id: notify.vk_notify_2000001234
+      entity_id: notify.vk_notify_2000000003
       message: 🏓 Понг! Бот на связи и умеет отвечать на сообщения.
       reply_to: "{{ trigger.event.data.get('conversation_message_id') }}"
 ```
