@@ -1,41 +1,70 @@
 send_message:
   name: "Отправить сообщение"
-  description: Отправляет текстовое уведомление, координаты или карусель.
+  description: Отправляет текстовое уведомление, медиа, координаты или карусель.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
+    title:
+      name: Заголовок
+      description: Необязательный заголовок. Будет добавлен первой строкой перед сообщением.
+      required: false
+      selector:
+        text:
     message:
       name: Сообщение
-      description: Текст сообщения.
+      description: Основной текст уведомления. Поддерживает эмодзи и перенос строк.
       required: true
       selector:
         text:
           multiline: true
-    title:
-      name: Заголовок
-      description: Добавляется первой строкой перед сообщением.
+    attachment:
+      name: Вложение (Медиа)
+      description: "Готовая строка медиафайла из ВК, например: photo123_456 или doc-789_012."
       required: false
       selector:
         text:
+    disable_mentions:
+      name: Без звука для упоминаний
+      description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
+      required: false
+      default: false
+      selector:
+        boolean:
     keyboard:
       name: Клавиатура
       description: JSON-объект с кнопками (inline или обычными).
       required: false
       selector:
         object:
+    template:
+      name: Карусель (Карточки)
+      description: JSON-объект карточек карусели с картинками и кнопками.
+      required: false
+      selector:
+        object:
+    payload:
+      name: Скрытые данные (Payload)
+      description: Невидимая строка данных, которая вернется боту при ответе или пересылке.
+      required: false
+      selector:
+        text:
     lat:
       name: Широта (Latitude)
-      description: Координата для нативной карты (например, 55.751244).
+      description: Координата широты для отправки геолокации.
       required: false
       selector:
         text:
     long:
       name: Долгота (Longitude)
-      description: Координата для нативной карты (например, 37.618423).
+      description: Координата долготы для отправки геолокации.
       required: false
       selector:
         text:
     reply_to:
-      name: ID сообщения для ответа
-      description: Бот ответит на это сообщение (укажите cmid).
+      name: Ответить на сообщение
+      description: Идентификатор сообщения (cmid) в беседе, на которое нужно ответить.
       required: false
       selector:
         number:
@@ -43,13 +72,19 @@ send_message:
 
 send_photo:
   name: "Отправить фото"
-  description: Отправляет фото через VK.
+  description: Отправляет фотографию через ВКонтакте.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     message:
       name: Подпись к фото
+      description: Необязательный текст под фотографией.
       required: false
       selector:
         text:
+          multiline: true
     file:
       name: Локальный путь к файлу
       description: Например, /config/www/image.jpg
@@ -58,12 +93,29 @@ send_photo:
         text:
     url:
       name: URL картинки
-      description: Ссылка на картинку в интернете.
+      description: Прямая ссылка на картинку в интернете.
       required: false
       selector:
         text:
+    disable_mentions:
+      name: Без звука для упоминаний
+      description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
+      required: false
+      default: false
+      selector:
+        boolean:
+    payload:
+      name: Скрытые данные (Payload)
+      required: false
+      selector:
+        text:
+    keyboard:
+      name: Клавиатура
+      required: false
+      selector:
+        object:
     reply_to:
-      name: ID сообщения для ответа
+      name: Ответить на сообщение
       required: false
       selector:
         number:
@@ -71,10 +123,15 @@ send_photo:
 
 send_file:
   name: "Отправить файл"
-  description: Отправить файл через VK.
+  description: Отправляет произвольный документ через ВКонтакте.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     file:
       name: Локальный путь к файлу
+      description: Локальный путь к отправляемому файлу.
       required: true
       selector:
         text:
@@ -83,8 +140,26 @@ send_file:
       required: false
       selector:
         text:
+          multiline: true
+    disable_mentions:
+      name: Без звука для упоминаний
+      description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
+      required: false
+      default: false
+      selector:
+        boolean:
+    payload:
+      name: Скрытые данные (Payload)
+      required: false
+      selector:
+        text:
+    keyboard:
+      name: Клавиатура
+      required: false
+      selector:
+        object:
     reply_to:
-      name: ID сообщения для ответа
+      name: Ответить на сообщение
       required: false
       selector:
         number:
@@ -92,7 +167,11 @@ send_file:
 
 send_voice:
   name: "Отправить голосовое сообщение"
-  description: Отправляет аудиофайл (.ogg) как голосовое сообщение.
+  description: Отправляет аудиофайл (.ogg) как нативное голосовое сообщение.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     file:
       name: Локальный путь к аудиофайлу
@@ -100,14 +179,43 @@ send_voice:
       selector:
         text:
     message:
-      name: Подпись к аудио
+      name: Текст
+      description: Текст, который будет отправлен вместе с аудио.
       required: false
       selector:
         text:
+          multiline: true
+    disable_mentions:
+      name: Без звука для упоминаний
+      description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
+      required: false
+      default: false
+      selector:
+        boolean:
+    payload:
+      name: Скрытые данные (Payload)
+      required: false
+      selector:
+        text:
+    keyboard:
+      name: Клавиатура
+      required: false
+      selector:
+        object:
+    reply_to:
+      name: Ответить на сообщение
+      required: false
+      selector:
+        number:
+          mode: box
 
 wall_post:
   name: "Опубликовать на стене"
-  description: Отправляет запись на стену.
+  description: Отправляет новую запись на стену сообщества.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     message:
       name: Текст поста
@@ -123,7 +231,11 @@ wall_post:
 
 edit_message:
   name: "Редактировать сообщение"
-  description: Изменяет текст и клавиатуру ранее отправленного сообщения.
+  description: Изменяет текст, клавиатуру и вложения ранее отправленного сообщения.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     message:
       name: Новый текст сообщения
@@ -132,34 +244,45 @@ edit_message:
         text:
           multiline: true
     message_id:
-      name: ID сообщения (В личке)
+      name: Идентификатор сообщения (В личных сообщениях)
       required: false
       selector:
         number:
           mode: box
     conversation_message_id:
-      name: ID сообщения (В беседе)
+      name: Идентификатор сообщения (В беседе)
       required: false
       selector:
         number:
           mode: box
+    attachment:
+      name: Новое вложение
+      description: Строка медиа (photo123_456). Передайте пустую строку для удаления вложения.
+      required: false
+      selector:
+        text:
     keyboard:
       name: Новая клавиатура
       required: false
       selector:
         object:
-    attachment:
-      name: Новое вложение
+    disable_mentions:
+      name: Без звука для упоминаний
+      description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
       required: false
       selector:
-        text:
+        boolean:
 
 delete_message:
   name: "Удалить сообщение"
   description: Удаляет сообщение у всех участников чата.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     conversation_message_id:
-      name: ID сообщения (cmid)
+      name: Идентификатор сообщения (cmid)
       required: true
       selector:
         number:
@@ -167,7 +290,11 @@ delete_message:
 
 send_sticker:
   name: "Отправить стикер"
-  description: Отправляет стикер ВКонтакте по его номеру.
+  description: Отправляет стикер ВКонтакте по его внутреннему номеру.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     sticker_id:
       name: ID Стикера
@@ -179,7 +306,7 @@ send_sticker:
           min: 1
           mode: box
     reply_to:
-      name: ID сообщения для ответа
+      name: Ответить на сообщение
       required: false
       selector:
         number:
@@ -187,7 +314,11 @@ send_sticker:
 
 edit_chat:
   name: "Изменить название беседы"
-  description: Меняет заголовок группового чата (Бот должен быть админом!).
+  description: Меняет заголовок группового чата (Для этого бот должен быть администратором).
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     title:
       name: Новое название
@@ -199,11 +330,15 @@ edit_chat:
 
 get_user_info:
   name: "Получить инфо о пользователе"
-  description: Пробивает юзера. Возвращает Имя, Фамилию и статус Онлайн.
+  description: Запрашивает данные пользователя. Возвращает Имя, Фамилию и статус Онлайн.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     user_id:
       name: VK ID пользователя
-      description: Цифровой ID (или from_id из события).
+      description: Цифровой ID пользователя (или from_id из события).
       required: true
       example: "123456789"
       selector:
@@ -211,7 +346,11 @@ get_user_info:
 
 set_activity:
   name: "Статус активности"
-  description: Показывает в чате, что бот печатает или записывает голосовое.
+  description: Показывает в чате, что бот печатает или записывает голосовое сообщение.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     type:
       name: Тип активности
@@ -226,11 +365,15 @@ set_activity:
 
 send_reaction:
   name: "Отправить реакцию (Лайк)"
-  description: Ставит эмодзи-реакцию на конкретное сообщение.
+  description: Устанавливает эмодзи-реакцию на конкретное сообщение.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     conversation_message_id:
-      name: ID сообщения (cmid)
-      description: На какое сообщение ставим реакцию?
+      name: Идентификатор сообщения (cmid)
+      description: На какое сообщение поставить реакцию?
       required: true
       selector:
         number:
@@ -243,20 +386,24 @@ send_reaction:
         select:
           options:
             - label: "👍 Палец вверх (1)"
-              value: 1
+              value: "1"
             - label: "👎 Палец вниз (2)"
-              value: 2
+              value: "2"
             - label: "❤ Сердце (3)"
-              value: 3
+              value: "3"
             - label: "🔥 Огонь (4)"
-              value: 4
+              value: "4"
 
 pin_message:
   name: "Закрепить сообщение"
   description: Закрепляет сообщение в шапке беседы.
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
   fields:
     conversation_message_id:
-      name: ID сообщения (cmid)
+      name: Идентификатор сообщения (cmid)
       required: true
       selector:
         number:
