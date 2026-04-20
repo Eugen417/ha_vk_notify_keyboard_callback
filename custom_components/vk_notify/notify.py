@@ -1,6 +1,6 @@
 """
-VK Notify (Keyboard Edition) v1.2.3
-Clean edition: Removed dead API features (expire_ttl, dont_parse_links) restricted for bots.
+VK Notify (Keyboard Edition) v1.2.8
+Clean edition: Removed broken VK Polls API. Retained text formatting support.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers import entity_platform
 
 from .const import CONF_ACCESS_TOKEN, CONF_PEER_ID, VK_API_VERSION
-from .helpers import async_upload_file
+from .helpers import async_upload_file, parse_vk_formatting
 
 VK_API_SEND = "https://api.vk.com/method/messages.send"
 VK_API_EDIT = "https://api.vk.com/method/messages.edit"
@@ -47,7 +47,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     platform.async_register_entity_service("send_file", {vol.Required("file"): cv.string, vol.Optional("message"): cv.string, **COMMON_FIELDS}, "async_send_file", supports_response=SupportsResponse.OPTIONAL)
     platform.async_register_entity_service("send_voice", {vol.Required("file"): cv.string, vol.Optional("message"): cv.string, **COMMON_FIELDS}, "async_send_voice", supports_response=SupportsResponse.OPTIONAL)
     platform.async_register_entity_service("edit_message", {vol.Required("message"): cv.string, vol.Optional("message_id"): cv.positive_int, vol.Optional("conversation_message_id"): cv.positive_int, vol.Optional("attachment"): cv.string, vol.Optional("keyboard"): dict, vol.Optional("disable_mentions"): cv.boolean}, "async_edit_message")
-    
     platform.async_register_entity_service("wall_post", {vol.Optional("message"): cv.string, vol.Optional("file"): cv.string}, "async_wall_post", supports_response=SupportsResponse.OPTIONAL)
     platform.async_register_entity_service("delete_message", {vol.Optional("message_id"): cv.positive_int, vol.Optional("conversation_message_id"): cv.positive_int}, "async_delete_message")
     platform.async_register_entity_service("set_activity", {vol.Required("type"): vol.In(["typing", "audiomsg"])}, "async_set_activity")
@@ -119,7 +118,10 @@ class VkNotifyEntity(NotifyEntity):
 
     async def async_send_message(self, message: str, title: str | None = None, **kwargs) -> ServiceResponse:
         if title: message = f"{title}\n{message}"
-        params = {"message": message}
+        clean_msg, fmt_data = parse_vk_formatting(message)
+        params = {"message": clean_msg}
+        if fmt_data: params["format_data"] = fmt_data
+
         if "attachment" in kwargs: params["attachment"] = kwargs["attachment"]
         if "template" in kwargs: params["template"] = json.dumps(kwargs["template"], ensure_ascii=False)
         if "lat" in kwargs and "long" in kwargs: params["lat"], params["long"] = kwargs["lat"], kwargs["long"]
@@ -130,26 +132,38 @@ class VkNotifyEntity(NotifyEntity):
 
     async def async_send_photo(self, **kwargs) -> ServiceResponse:
         path = kwargs.get("url") or kwargs.get("file")
-        params = {"message": kwargs.get("message", "")}
+        clean_msg, fmt_data = parse_vk_formatting(kwargs.get("message", ""))
+        params = {"message": clean_msg}
+        if fmt_data: params["format_data"] = fmt_data
+
         if path: params["attachment"] = await async_upload_file(self.hass, self._access_token, self._peer_id, path)
         self._apply_common_params(params, kwargs)
         self._prepare_reply(params, kwargs.get("reply_to"))
         return await self._internal_send(VK_API_SEND, params)
 
     async def async_send_file(self, **kwargs) -> ServiceResponse:
-        params = {"message": kwargs.get("message", ""), "attachment": await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])}
+        clean_msg, fmt_data = parse_vk_formatting(kwargs.get("message", ""))
+        params = {"message": clean_msg, "attachment": await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])}
+        if fmt_data: params["format_data"] = fmt_data
+
         self._apply_common_params(params, kwargs)
         self._prepare_reply(params, kwargs.get("reply_to"))
         return await self._internal_send(VK_API_SEND, params)
 
     async def async_send_voice(self, **kwargs) -> ServiceResponse:
-        params = {"message": kwargs.get("message", ""), "attachment": await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])}
+        clean_msg, fmt_data = parse_vk_formatting(kwargs.get("message", ""))
+        params = {"message": clean_msg, "attachment": await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])}
+        if fmt_data: params["format_data"] = fmt_data
+
         self._apply_common_params(params, kwargs)
         self._prepare_reply(params, kwargs.get("reply_to"))
         return await self._internal_send(VK_API_SEND, params)
 
     async def async_edit_message(self, message: str, **kwargs) -> None:
-        params = {"message": message}
+        clean_msg, fmt_data = parse_vk_formatting(message)
+        params = {"message": clean_msg}
+        if fmt_data: params["format_data"] = fmt_data
+
         if "attachment" in kwargs: params["attachment"] = kwargs["attachment"]
         if kwargs.get("disable_mentions"): params["disable_mentions"] = 1
         if "keyboard" in kwargs: params["keyboard"] = json.dumps(kwargs["keyboard"], ensure_ascii=False)
@@ -159,7 +173,8 @@ class VkNotifyEntity(NotifyEntity):
         await self._internal_send(VK_API_EDIT, params)
 
     async def async_wall_post(self, **kwargs) -> ServiceResponse:
-        params = {"owner_id": f"-{self.hass.data['vk_notify'][self._entry.entry_id]['data']['group_id']}", "message": kwargs.get("message", "")}
+        clean_msg, _ = parse_vk_formatting(kwargs.get("message", ""))
+        params = {"owner_id": f"-{self.hass.data['vk_notify'][self._entry.entry_id]['data']['group_id']}", "message": clean_msg}
         if kwargs.get("file"): params["attachments"] = await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])
         return await self._internal_send(VK_API_WALL, params)
 
