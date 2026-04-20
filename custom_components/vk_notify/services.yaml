@@ -14,7 +14,7 @@ send_message:
         text:
     message:
       name: Сообщение
-      description: Основной текст уведомления. Поддерживает эмодзи и перенос строк.
+      description: "Основной текст уведомления. Поддерживает Markdown (**жирный**, *курсив*) и HTML-теги для красивого форматирования."
       required: true
       selector:
         text:
