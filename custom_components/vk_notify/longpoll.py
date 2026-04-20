@@ -1,5 +1,5 @@
 """
-VK Notify (Keyboard Edition) longpoll.py v1.0.6
+VK Notify (Keyboard Edition) longpoll.py v1.0.8
 """
 
 from __future__ import annotations
