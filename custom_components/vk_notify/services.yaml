@@ -1,3 +1,4 @@
+# v1.0.9
 send_message:
   name: "Отправить сообщение"
   description: Отправляет текстовое уведомление, медиа, координаты или карусель.
@@ -19,6 +20,22 @@ send_message:
       selector:
         text:
           multiline: true
+    parse_mode:
+      name: Режим разбора
+      description: "Парсер текста сообщения. Смотрите параметры форматирования для более подробной информации."
+      default: html
+      selector:
+        select:
+          mode: list
+          options:
+            - label: "HTML"
+              value: html
+            - label: "Markdown (Устаревший)"
+              value: markdown
+            - label: "MarkdownV2"
+              value: markdownv2
+            - label: "Обычный текст"
+              value: plain
     attachment:
       name: Вложение (Медиа)
       description: "Готовая строка медиафайла из ВК, например: photo123_456 или doc-789_012."
@@ -85,6 +102,22 @@ send_photo:
       selector:
         text:
           multiline: true
+    parse_mode:
+      name: Режим разбора
+      description: "Парсер текста сообщения. Смотрите параметры форматирования для более подробной информации."
+      default: html
+      selector:
+        select:
+          mode: list
+          options:
+            - label: "HTML"
+              value: html
+            - label: "Markdown (Устаревший)"
+              value: markdown
+            - label: "MarkdownV2"
+              value: markdownv2
+            - label: "Обычный текст"
+              value: plain
     file:
       name: Локальный путь к файлу
       description: Например, /config/www/image.jpg
@@ -141,6 +174,22 @@ send_file:
       selector:
         text:
           multiline: true
+    parse_mode:
+      name: Режим разбора
+      description: "Парсер текста сообщения. Смотрите параметры форматирования для более подробной информации."
+      default: html
+      selector:
+        select:
+          mode: list
+          options:
+            - label: "HTML"
+              value: html
+            - label: "Markdown (Устаревший)"
+              value: markdown
+            - label: "MarkdownV2"
+              value: markdownv2
+            - label: "Обычный текст"
+              value: plain
     disable_mentions:
       name: Без звука для упоминаний
       description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
@@ -185,6 +234,22 @@ send_voice:
       selector:
         text:
           multiline: true
+    parse_mode:
+      name: Режим разбора
+      description: "Парсер текста сообщения. Смотрите параметры форматирования для более подробной информации."
+      default: html
+      selector:
+        select:
+          mode: list
+          options:
+            - label: "HTML"
+              value: html
+            - label: "Markdown (Устаревший)"
+              value: markdown
+            - label: "MarkdownV2"
+              value: markdownv2
+            - label: "Обычный текст"
+              value: plain
     disable_mentions:
       name: Без звука для упоминаний
       description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
@@ -243,6 +308,22 @@ edit_message:
       selector:
         text:
           multiline: true
+    parse_mode:
+      name: Режим разбора
+      description: "Парсер текста сообщения. Смотрите параметры форматирования для более подробной информации."
+      default: html
+      selector:
+        select:
+          mode: list
+          options:
+            - label: "HTML"
+              value: html
+            - label: "Markdown (Устаревший)"
+              value: markdown
+            - label: "MarkdownV2"
+              value: markdownv2
+            - label: "Обычный текст"
+              value: plain
     message_id:
       name: Идентификатор сообщения (В личных сообщениях)
       required: false
