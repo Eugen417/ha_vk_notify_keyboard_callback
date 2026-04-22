@@ -1,5 +1,5 @@
 """
-VK Notify (Keyboard Edition) v1.2.8
+VK Notify (Keyboard Edition) v1.2.9
 Clean edition: Removed broken VK Polls API. Retained text formatting support.
 """
 from __future__ import annotations
