@@ -612,6 +612,279 @@ mode: single
 
 </details>
 
+### 12. Всё в одном (все возможности в одной автоматизации)
+Автоматизация демонстратор всех возможностей данного форка. Не забудте изменить id 2000000003 на свои, а во втором блоке помимо этого задайте ID искомого пользователя VK для определения Имени и Фамилии.
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
+
+```yaml
+alias: "VK: Демонстрация всех возможностей (Master Showcase) V3"
+description: "Полный прогон всех служб обновленной интеграции VK Notify, включая парсеры и get_user_info"
+mode: single
+triggers: [] # Запускается вручную для тестов
+
+actions:
+  # ==========================================
+  # 1. ИМИТАЦИЯ АКТИВНОСТИ
+  # ==========================================
+  - alias: "1. Имитация набора текста (Печатает...)"
+    action: vk_notify.set_activity
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      type: typing
+  - delay: "00:00:02"
+
+  # ==========================================
+  # 2. ПОЛУЧЕНИЕ ДАННЫХ ПОЛЬЗОВАТЕЛЯ
+  # ==========================================
+  - alias: "2. Скрытый запрос данных пользователя (get_user_info)"
+    action: vk_notify.get_user_info
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      user_id: "123456789" # ID Пользователя ВК <------------------
+    response_variable: vk_user
+
+  # ==========================================
+  # 3. БАЗОВОЕ СООБЩЕНИЕ + ИМЯ + RESPONSE VARIABLE
+  # ==========================================
+  - alias: "3. Отправка приветствия по имени и сохранение ID сообщения"
+    action: vk_notify.send_message
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      title: "🚀 ТЕСТОВЫЙ ПРОГОН СИСТЕМЫ"
+      message: >
+        <b>Приветствую, {{ vk_user.full_name }}!</b> 👋
+        
+        Статус в ВК: {{ '✅ В сети' if vk_user.is_online else '❌ Не в сети' }}
+        Система обновлена до энтерпрайз-уровня. Начинаю демонстрацию функций!
+      parse_mode: html
+      keyboard:
+        inline: true
+        buttons:
+          - - action:
+                type: callback
+                label: "👍 Круто!"
+                payload: '{"test":"ok"}'
+              color: positive
+    response_variable: welcome_msg
+  - delay: "00:00:02"
+
+  # ==========================================
+  # 4. ДЕМОНСТРАЦИЯ ВСЕХ РЕЖИМОВ ПАРСИНГА (PARSE_MODE)
+  # ==========================================
+
+  # 4.1. Режим: HTML (По умолчанию)
+  - alias: "4.1. Тест парсера: HTML (По умолчанию)"
+    action: vk_notify.send_message
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      message: >
+        🌐 <b>Тест режима HTML:</b>
+        Здесь работает <i>курсив</i>, <u>подчеркивание</u>, <a href="https://ha.ru">гиперссылки</a> 
+        и, конечно же, <b>жирный</b> шрифт!
+      parse_mode: html
+  - delay: "00:00:02"
+
+  # 4.2. Режим: Markdown (Устаревший)
+  - alias: "4.2. Тест парсера: Markdown (Legacy)"
+    action: vk_notify.send_message
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      message: >
+        📝 **Тест режима Markdown (Legacy):**
+        Здесь работает *курсив*, [гиперссылки](https://ha.ru) 
+        и, конечно же, **жирный** шрифт!
+      parse_mode: markdown
+  - delay: "00:00:02"
+
+  # 4.3. Режим: MarkdownV2
+  - alias: "4.3. Тест парсера: MarkdownV2"
+    action: vk_notify.send_message
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      message: >
+        🚀 **Тест режима MarkdownV2:**
+        Здесь работает *курсив*, __подчеркивание__, [гиперссылки](https://ha.ru) 
+        и, конечно же, **жирный** шрифт!
+        (Спецсимволы \- \. \! \+ передаются корректно).
+      parse_mode: markdownv2
+  - delay: "00:00:02"
+
+  # 4.4. Режим: Обычный текст (Plain)
+  - alias: "4.4. Тест парсера: Plain (Обычный текст)"
+    action: vk_notify.send_message
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      message: >
+        🧱 Тест режима Plain (Обычный текст):
+        Теги <b>HTML</b> и **Markdown** теперь будут отображаться как обычные символы.
+        Смотри: <b>жирный</b> или **жирный** больше не работают, текст идет как есть.
+        Идеально для логов: error_system_log_2026.txt
+      parse_mode: plain
+  - delay: "00:00:02"
+
+  # ==========================================
+  # 5. ОТПРАВКА СТИКЕРА
+  # ==========================================
+  - alias: "5. Отправка стикера ВК"
+    action: vk_notify.send_sticker
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      sticker_id: 3 # Собака Спотти
+  - delay: "00:00:02"
+
+  # ==========================================
+  # 6. МАНИПУЛЯЦИЯ СООБЩЕНИЯМИ (РЕАКЦИЯ, ЗАКРЕП, РЕДАКТИРОВАНИЕ)
+  # ==========================================
+  
+  # Ставим лайк (реакцию) на приветственное сообщение
+  - alias: "6.1. Установка реакции (Лайк) на первое сообщение"
+    action: vk_notify.send_reaction
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      reaction_id: 4 # Огонь 🔥
+      conversation_message_id: >
+        {% set r = welcome_msg.values() | first | default({}) %}
+        {{ r.get('conversation_message_id', 0) }}
+  
+  # Закрепляем это сообщение
+  - alias: "6.2. Закрепление первого сообщения в шапке чата"
+    action: vk_notify.pin_message
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      conversation_message_id: >
+        {% set r = welcome_msg.values() | first | default({}) %}
+        {{ r.get('conversation_message_id', 0) }}
+
+  # Редактируем текст первого сообщения
+  - alias: "6.3. Редактирование текста первого сообщения"
+    action: vk_notify.edit_message
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      message: "<b>✅ Данные {{ vk_user.full_name }} получены.</b> Тест продолжается..."
+      parse_mode: html
+      conversation_message_id: >
+        {% set r = welcome_msg.values() | first | default({}) %}
+        {{ r.get('conversation_message_id', 0) }}
+  - delay: "00:00:02"
+
+# ==========================================
+  # 7. ГЕОЛОКАЦИЯ (КАРТА)
+  # ==========================================
+  - alias: "7. Отправка геолокации (Координаты Кремля)"
+    action: vk_notify.send_message
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      message: "📍 Координаты (Московский Кремль):"
+      lat: "55.7520"
+      long: "37.6175"
+  - delay: "00:00:02"
+
+  # ==========================================
+  # 8. ФОТО ИЗ ИНТЕРНЕТА (ПО URL)
+  # ==========================================
+  - alias: "8. Отправка картинки по ссылке (URL)"
+    action: vk_notify.send_photo
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      url: "https://www.home-assistant.io/images/default-social.png"
+      message: "📸 Отправка картинки напрямую по ссылке URL."
+      parse_mode: html
+  - delay: "00:00:02"
+
+  # ==========================================
+  # 9. КАРУСЕЛЬ (ШАБЛОН)
+  # ==========================================
+  - alias: "9. Отправка карусели с использованием имени пользователя"
+    action: vk_notify.send_message
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      message: "🎠 Тест карусели:"
+      template:
+        type: carousel
+        elements:
+          - title: "Элемент 1"
+            description: "Привет, {{ vk_user.full_name }}!"
+            buttons:
+              - action:
+                  type: callback
+                  label: "Кнопка 1"
+                  payload: '{"test":"1"}'
+                color: primary
+          - title: "Элемент 2"
+            description: "Статус ВК: {{ 'В сети' if vk_user.is_online else 'Оффлайн' }}"
+            buttons:
+              - action:
+                  type: callback
+                  label: "Кнопка 2"
+                  payload: '{"test":"2"}'
+                color: positive
+  - delay: "00:00:02"
+
+  # ==========================================
+  # 10. ИЗМЕНЕНИЕ НАЗВАНИЯ ЧАТА (ТРЕБУЮТСЯ ПРАВА АДМИНА)
+  # ==========================================
+  - alias: "10. Изменение названия беседы (нужны права Администратора)"
+    action: vk_notify.edit_chat
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      title: "🟢 ТЕСТ ЗАВЕРШЕН | Дом 190"
+    continue_on_error: true # Если бот не админ, пропустит без остановки скрипта
+
+  # ==========================================
+  # 11. ФАЙЛЫ И ГОЛОСОВЫЕ (ПРИМЕРЫ ДЛЯ ЛОКАЛЬНЫХ ПУТЕЙ)
+  # ==========================================
+  # Раскомментируй и укажи свои пути, когда добавишь файлы в папку /config/www/
+  #
+  # - alias: "11.1. Статус 'Записывает голосовое...'"
+  #   action: vk_notify.set_activity
+  #   target: { entity_id: notify.vk_notify_2000000003 }
+  #   data: { type: audiomsg }
+  # - delay: "00:00:02"
+  #
+  # - alias: "11.2. Отправка голосового сообщения (.ogg)"
+  #   action: vk_notify.send_voice
+  #   target: { entity_id: notify.vk_notify_2000000003 }
+  #   data:
+  #     file: "/config/www/test_voice.ogg"
+  #
+  # - alias: "11.3. Отправка файла документа"
+  #   action: vk_notify.send_file
+  #   target: { entity_id: notify.vk_notify_2000000003 }
+  #   data:
+  #     file: "/config/www/report.pdf"
+  #     message: "📄 Отчет о тестировании"
+
+  # ==========================================
+  # 12. ЗАВЕРШЕНИЕ
+  # ==========================================
+  - alias: "12. Завершающее сообщение"
+    action: vk_notify.send_message
+    target:
+      entity_id: notify.vk_notify_2000000003
+    data:
+      message: "🏁 <b>Все системы работают штатно.</b> Тест окончен!"
+      parse_mode: html
+```
+
+</details>
+
 ---
 
 ## Новые возможности начиная с версии v1.0.2
