@@ -1,5 +1,5 @@
 """
-VK Notify (Keyboard Edition) helpers.py v1.0.8
+VK Notify (Keyboard Edition) helpers.py v1.0.9
 """
 
 from __future__ import annotations
@@ -21,10 +21,14 @@ def encode_utf16_len(s: str) -> int:
     """Возвращает длину строки в единицах UTF-16 (как ожидает VK API)."""
     return len(s.encode('utf-16-le')) // 2
 
-def parse_vk_formatting(text: str) -> tuple[str, str | None]:
+def parse_vk_formatting(text: str, parse_mode: str = "html") -> tuple[str, str | None]:
     """Преобразует Markdown/HTML в чистый текст и JSON-объект format_data."""
     if not isinstance(text, str):
         return str(text), None
+
+    # ЕСЛИ ВЫБРАН ОБЫЧНЫЙ ТЕКСТ - ПРЕРЫВАЕМ ФОРМАТИРОВАНИЕ
+    if parse_mode == "plain":
+        return text.strip(), None
 
     text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
     text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', text)
