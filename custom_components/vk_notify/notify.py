@@ -39,14 +39,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         vol.Optional("disable_mentions"): cv.boolean,
         vol.Optional("payload"): cv.string,
         vol.Optional("keyboard"): dict,
-        vol.Optional("reply_to"): cv.positive_int
+        vol.Optional("reply_to"): cv.positive_int,
+        vol.Optional("parse_mode", default="html"): vol.In(["html", "markdown", "markdownv2", "plain"])
     }
 
     platform.async_register_entity_service("send_message", {vol.Required("message"): cv.string, vol.Optional("title"): cv.string, vol.Optional("attachment"): cv.string, vol.Optional("template"): dict, vol.Optional("lat"): cv.string, vol.Optional("long"): cv.string, **COMMON_FIELDS}, "async_send_message", supports_response=SupportsResponse.OPTIONAL)
     platform.async_register_entity_service("send_photo", {vol.Optional("url"): cv.string, vol.Optional("file"): cv.string, vol.Optional("message"): cv.string, **COMMON_FIELDS}, "async_send_photo", supports_response=SupportsResponse.OPTIONAL)
     platform.async_register_entity_service("send_file", {vol.Required("file"): cv.string, vol.Optional("message"): cv.string, **COMMON_FIELDS}, "async_send_file", supports_response=SupportsResponse.OPTIONAL)
     platform.async_register_entity_service("send_voice", {vol.Required("file"): cv.string, vol.Optional("message"): cv.string, **COMMON_FIELDS}, "async_send_voice", supports_response=SupportsResponse.OPTIONAL)
-    platform.async_register_entity_service("edit_message", {vol.Required("message"): cv.string, vol.Optional("message_id"): cv.positive_int, vol.Optional("conversation_message_id"): cv.positive_int, vol.Optional("attachment"): cv.string, vol.Optional("keyboard"): dict, vol.Optional("disable_mentions"): cv.boolean}, "async_edit_message")
+    platform.async_register_entity_service("edit_message", {vol.Required("message"): cv.string, vol.Optional("message_id"): cv.positive_int, vol.Optional("conversation_message_id"): cv.positive_int, vol.Optional("attachment"): cv.string, vol.Optional("keyboard"): dict, vol.Optional("disable_mentions"): cv.boolean, vol.Optional("parse_mode", default="html"): vol.In(["html", "markdown", "markdownv2", "plain"])}, "async_edit_message")
     platform.async_register_entity_service("wall_post", {vol.Optional("message"): cv.string, vol.Optional("file"): cv.string}, "async_wall_post", supports_response=SupportsResponse.OPTIONAL)
     platform.async_register_entity_service("delete_message", {vol.Optional("message_id"): cv.positive_int, vol.Optional("conversation_message_id"): cv.positive_int}, "async_delete_message")
     platform.async_register_entity_service("set_activity", {vol.Required("type"): vol.In(["typing", "audiomsg"])}, "async_set_activity")
@@ -118,7 +119,7 @@ class VkNotifyEntity(NotifyEntity):
 
     async def async_send_message(self, message: str, title: str | None = None, **kwargs) -> ServiceResponse:
         if title: message = f"{title}\n{message}"
-        clean_msg, fmt_data = parse_vk_formatting(message)
+        clean_msg, fmt_data = parse_vk_formatting(message, kwargs.get("parse_mode", "html"))
         params = {"message": clean_msg}
         if fmt_data: params["format_data"] = fmt_data
 
@@ -132,7 +133,7 @@ class VkNotifyEntity(NotifyEntity):
 
     async def async_send_photo(self, **kwargs) -> ServiceResponse:
         path = kwargs.get("url") or kwargs.get("file")
-        clean_msg, fmt_data = parse_vk_formatting(kwargs.get("message", ""))
+        clean_msg, fmt_data = parse_vk_formatting(kwargs.get("message", ""), kwargs.get("parse_mode", "html"))
         params = {"message": clean_msg}
         if fmt_data: params["format_data"] = fmt_data
 
@@ -142,7 +143,7 @@ class VkNotifyEntity(NotifyEntity):
         return await self._internal_send(VK_API_SEND, params)
 
     async def async_send_file(self, **kwargs) -> ServiceResponse:
-        clean_msg, fmt_data = parse_vk_formatting(kwargs.get("message", ""))
+        clean_msg, fmt_data = parse_vk_formatting(kwargs.get("message", ""), kwargs.get("parse_mode", "html"))
         params = {"message": clean_msg, "attachment": await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])}
         if fmt_data: params["format_data"] = fmt_data
 
@@ -151,7 +152,7 @@ class VkNotifyEntity(NotifyEntity):
         return await self._internal_send(VK_API_SEND, params)
 
     async def async_send_voice(self, **kwargs) -> ServiceResponse:
-        clean_msg, fmt_data = parse_vk_formatting(kwargs.get("message", ""))
+        clean_msg, fmt_data = parse_vk_formatting(kwargs.get("message", ""), kwargs.get("parse_mode", "html"))
         params = {"message": clean_msg, "attachment": await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])}
         if fmt_data: params["format_data"] = fmt_data
 
@@ -160,7 +161,7 @@ class VkNotifyEntity(NotifyEntity):
         return await self._internal_send(VK_API_SEND, params)
 
     async def async_edit_message(self, message: str, **kwargs) -> None:
-        clean_msg, fmt_data = parse_vk_formatting(message)
+        clean_msg, fmt_data = parse_vk_formatting(message, kwargs.get("parse_mode", "html"))
         params = {"message": clean_msg}
         if fmt_data: params["format_data"] = fmt_data
 
@@ -173,7 +174,7 @@ class VkNotifyEntity(NotifyEntity):
         await self._internal_send(VK_API_EDIT, params)
 
     async def async_wall_post(self, **kwargs) -> ServiceResponse:
-        clean_msg, _ = parse_vk_formatting(kwargs.get("message", ""))
+        clean_msg, _ = parse_vk_formatting(kwargs.get("message", ""), kwargs.get("parse_mode", "html"))
         params = {"owner_id": f"-{self.hass.data['vk_notify'][self._entry.entry_id]['data']['group_id']}", "message": clean_msg}
         if kwargs.get("file"): params["attachments"] = await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])
         return await self._internal_send(VK_API_WALL, params)
