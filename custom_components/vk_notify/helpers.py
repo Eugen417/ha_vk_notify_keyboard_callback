@@ -1,5 +1,5 @@
 """
-VK Notify (Keyboard Edition) helpers.py v1.0.9
+VK Notify (Keyboard Edition) helpers.py v1.0.9 fix MarkdownV2
 """
 
 from __future__ import annotations
@@ -29,6 +29,10 @@ def parse_vk_formatting(text: str, parse_mode: str = "html") -> tuple[str, str |
     # ЕСЛИ ВЫБРАН ОБЫЧНЫЙ ТЕКСТ - ПРЕРЫВАЕМ ФОРМАТИРОВАНИЕ
     if parse_mode == "plain":
         return text.strip(), None
+
+    # 🔥 НАШ НОВЫЙ ПАТЧ: Если это MarkdownV2, удаляем слеши-невидимки перед спецсимволами
+    if parse_mode == "markdownv2":
+        text = re.sub(r'\\([_*\[\]()~`>#+\-=|{}.!])', r'\1', text)
 
     text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
     text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', text)
