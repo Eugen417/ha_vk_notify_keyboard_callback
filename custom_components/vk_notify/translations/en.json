@@ -91,6 +91,10 @@
           "name": "Caption",
           "description": "Optional caption for the file."
         },
+        "parse_mode": {
+          "name": "Parse Mode",
+          "description": "Message text parser. Choose 'Plain text' to send raw text without formatting."
+        },
         "disable_mentions": {
           "name": "Silent mentions",
           "description": "Disables only the specific mention push (@id). Note: The standard new message notification will still arrive unless the chat is muted."
@@ -120,6 +124,10 @@
         "message": {
           "name": "Caption",
           "description": "Optional text below the photo."
+        },
+        "parse_mode": {
+          "name": "Parse Mode",
+          "description": "Message text parser. Choose 'Plain text' to send raw text without formatting."
         },
         "file": {
           "name": "Local file path",
@@ -162,6 +170,10 @@
         "message": {
           "name": "Message",
           "description": "Main notification text. Supports emojis and line breaks."
+        },
+        "parse_mode": {
+          "name": "Parse Mode",
+          "description": "Message text parser. Choose 'Plain text' to send raw text without formatting."
         },
         "attachment": {
           "name": "Attachment (Media)",
@@ -208,6 +220,10 @@
         "message": {
           "name": "New message text",
           "description": "New text of the message."
+        },
+        "parse_mode": {
+          "name": "Parse Mode",
+          "description": "Message text parser. Choose 'Plain text' to send raw text without formatting."
         },
         "message_id": {
           "name": "Message ID (Private)",
@@ -306,6 +322,10 @@
         "message": {
           "name": "Text",
           "description": "Text to be sent alongside the audio."
+        },
+        "parse_mode": {
+          "name": "Parse Mode",
+          "description": "Message text parser. Choose 'Plain text' to send raw text without formatting."
         },
         "disable_mentions": {
           "name": "Silent mentions",
