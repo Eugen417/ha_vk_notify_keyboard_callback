@@ -23,7 +23,7 @@ from .const import (
     VK_API_VERSION,
     VK_API_WALL_POST,
 )
-from .helpers import async_upload_file, async_upload_photo
+from .helpers import async_upload_file, async_upload_photo, parse_vk_formatting
 from .longpoll import VkLongPollManager
 
 PLATFORMS = [Platform.NOTIFY]
@@ -41,6 +41,7 @@ SEND_PHOTO_SCHEMA = vol.Schema({
     vol.Optional("message", default=""): cv.string,
     vol.Optional("keyboard"): dict,
     vol.Optional("reply_to"): cv.positive_int,
+    vol.Optional("parse_mode", default="html"): vol.In(["html", "markdown", "markdownv2", "plain"]),
 })
 
 SEND_FILE_SCHEMA = vol.Schema({
@@ -49,6 +50,7 @@ SEND_FILE_SCHEMA = vol.Schema({
     vol.Optional("message", default=""): cv.string,
     vol.Optional("keyboard"): dict,
     vol.Optional("reply_to"): cv.positive_int,
+    vol.Optional("parse_mode", default="html"): vol.In(["html", "markdown", "markdownv2", "plain"]),
 })
 
 SEND_MESSAGE_SCHEMA = vol.Schema({
@@ -57,6 +59,7 @@ SEND_MESSAGE_SCHEMA = vol.Schema({
     vol.Optional("title"): cv.string,
     vol.Optional("keyboard"): dict,
     vol.Optional("reply_to"): cv.positive_int,
+    vol.Optional("parse_mode", default="html"): vol.In(["html", "markdown", "markdownv2", "plain"]),
 })
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -104,7 +107,10 @@ def _async_register_services(hass: HomeAssistant) -> None:
     # --- SEND MESSAGE ---
     async def handle_send_message(call: ServiceCall):
         msg = f"{call.data['title']}\n{call.data['message']}" if call.data.get("title") else call.data["message"]
-        params = {"message": msg}
+        clean_msg, fmt_data = parse_vk_formatting(msg, call.data.get("parse_mode", "html"))
+        params = {"message": clean_msg}
+        if fmt_data: params["format_data"] = fmt_data
+
         if call.data.get("keyboard"): params["keyboard"] = json.dumps(call.data["keyboard"], ensure_ascii=False)
         if call.data.get("reply_to"): params["reply_to"] = call.data["reply_to"]
         
@@ -125,7 +131,11 @@ def _async_register_services(hass: HomeAssistant) -> None:
             if entry and entry.config_entry_id in hass.data[DOMAIN]:
                 d = hass.data[DOMAIN][entry.config_entry_id]["data"]
                 att = await async_upload_photo(hass, d[CONF_ACCESS_TOKEN], d[CONF_PEER_ID], url=call.data.get("url"), filepath=call.data.get("file"))
-                params = {"attachment": att, "message": call.data.get("message", "")}
+                
+                clean_msg, fmt_data = parse_vk_formatting(call.data.get("message", ""), call.data.get("parse_mode", "html"))
+                params = {"attachment": att, "message": clean_msg}
+                if fmt_data: params["format_data"] = fmt_data
+
                 if call.data.get("keyboard"): params["keyboard"] = json.dumps(call.data["keyboard"], ensure_ascii=False)
                 if call.data.get("reply_to"): params["reply_to"] = call.data["reply_to"]
                 await _vk_send(d[CONF_ACCESS_TOKEN], d[CONF_PEER_ID], params)
@@ -140,7 +150,11 @@ def _async_register_services(hass: HomeAssistant) -> None:
             if entry and entry.config_entry_id in hass.data[DOMAIN]:
                 d = hass.data[DOMAIN][entry.config_entry_id]["data"]
                 att = await async_upload_file(hass, d[CONF_ACCESS_TOKEN], d[CONF_PEER_ID], call.data["file"])
-                params = {"attachment": att, "message": call.data.get("message", "")}
+                
+                clean_msg, fmt_data = parse_vk_formatting(call.data.get("message", ""), call.data.get("parse_mode", "html"))
+                params = {"attachment": att, "message": clean_msg}
+                if fmt_data: params["format_data"] = fmt_data
+
                 if call.data.get("keyboard"): params["keyboard"] = json.dumps(call.data["keyboard"], ensure_ascii=False)
                 if call.data.get("reply_to"): params["reply_to"] = call.data["reply_to"]
                 await _vk_send(d[CONF_ACCESS_TOKEN], d[CONF_PEER_ID], params)
@@ -156,7 +170,10 @@ def _async_register_services(hass: HomeAssistant) -> None:
             entry = ent_reg.async_get(eid)
             if entry and entry.config_entry_id in hass.data[DOMAIN]:
                 d = hass.data[DOMAIN][entry.config_entry_id]["data"]
-                params = {"access_token": d[CONF_ACCESS_TOKEN], "owner_id": f"-{d[CONF_GROUP_ID]}", "from_group": 1, "message": call.data.get("message", ""), "v": VK_API_VERSION}
+                
+                clean_msg, _ = parse_vk_formatting(call.data.get("message", ""), "html")
+                params = {"access_token": d[CONF_ACCESS_TOKEN], "owner_id": f"-{d[CONF_GROUP_ID]}", "from_group": 1, "message": clean_msg, "v": VK_API_VERSION}
+                
                 if call.data.get("file"):
                     params["attachments"] = await async_upload_file(hass, d[CONF_ACCESS_TOKEN], d[CONF_PEER_ID], call.data["file"])
                 async with session.post(VK_API_WALL_POST, data=params) as resp:
