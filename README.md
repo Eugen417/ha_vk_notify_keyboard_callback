@@ -1,5 +1,11 @@
 # VK Notify (Keyboard Edition) ⌨️
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/v/release/Eugen417/ha_vk_notify_keyboard_callback?style=for-the-badge)](https://github.com/Eugen417/ha_vk_notify_keyboard_callback/releases)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-compatible-blue.svg?style=for-the-badge&logo=home-assistant)](https://www.home-assistant.io/)
+[![GitHub Stars](https://img.shields.io/github/stars/Eugen417/ha_vk_notify_keyboard_callback.svg?style=for-the-badge)](https://github.com/Eugen417/ha_vk_notify_keyboard_callback/stargazers)
+[![License](https://img.shields.io/github/license/Eugen417/ha_vk_notify_keyboard_callback.svg?style=for-the-badge)](https://github.com/Eugen417/ha_vk_notify_keyboard_callback/blob/main/LICENSE)
+
 Форк интеграции `VK Notify` для Home Assistant, превращающий обычного бота ВКонтакте в **интерактивный пульт управления умным домом**. 
 
 Эта модификация, добавляет полноценную поддержку **динамических интерфейсов**, **нативных функций ВК** и **двусторонней связи**.
