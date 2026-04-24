@@ -1,6 +1,6 @@
 """
-VK Notify (Keyboard Edition) v1.5.0
-All services registered dynamically. Video upload removed.
+VK Notify (Keyboard Edition) v1.5.1
+Added: Dynamic auto_answer_callback injection into buttons.
 """
 from __future__ import annotations
 
@@ -41,6 +41,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         vol.Optional("disable_mentions"): cv.boolean,
         vol.Optional("payload"): cv.string,
         vol.Optional("keyboard"): dict,
+        vol.Optional("inline_keyboard"): cv.boolean,
+        vol.Optional("auto_answer_callback"): cv.boolean, # <-- НАШ ВЫКЛЮЧАТЕЛЬ
         vol.Optional("reply_to"): cv.positive_int,
         vol.Optional("parse_mode", default="html"): vol.In(["html", "markdown", "markdownv2", "plain"])
     }
@@ -109,7 +111,26 @@ class VkNotifyEntity(NotifyEntity):
     def _apply_common_params(self, params: dict, kwargs: dict) -> None:
         if kwargs.get("disable_mentions"): params["disable_mentions"] = 1
         if "payload" in kwargs: params["payload"] = kwargs["payload"]
-        if "keyboard" in kwargs: params["keyboard"] = json.dumps(kwargs["keyboard"], ensure_ascii=False)
+        if "keyboard" in kwargs:
+            kb = kwargs["keyboard"]
+            if isinstance(kb, dict):
+                # Управление инлайн-режимом
+                if "inline_keyboard" in kwargs: kb["inline"] = kwargs["inline_keyboard"]
+                elif "inline" not in kb: kb["inline"] = True
+                
+                # Умная пометка для АВТО-ОТВЕТА
+                if kwargs.get("auto_answer_callback"):
+                    for row in kb.get("buttons", []):
+                        for btn in row:
+                            if btn.get("action", {}).get("type") == "callback":
+                                act = btn["action"]
+                                # Инжектируем флаг в payload каждой кнопки
+                                p = act.get("payload", "{}")
+                                p_obj = json.loads(p) if isinstance(p, str) else p
+                                p_obj["_ha_auto"] = True
+                                act["payload"] = json.dumps(p_obj, ensure_ascii=False)
+                                
+            params["keyboard"] = json.dumps(kb, ensure_ascii=False)
 
     async def async_send_message(self, message: str, title: str | None = None, **kwargs) -> ServiceResponse:
         if title: message = f"{title}\n\n{message}"
@@ -154,10 +175,10 @@ class VkNotifyEntity(NotifyEntity):
         params = {"message": clean_msg}
         if fmt_data: params["format_data"] = fmt_data
         if "attachment" in kwargs: params["attachment"] = kwargs["attachment"]
-        if kwargs.get("disable_mentions"): params["disable_mentions"] = 1
         if "keyboard" in kwargs: params["keyboard"] = json.dumps(kwargs["keyboard"], ensure_ascii=False)
         if kwargs.get("message_id"): params["message_id"] = kwargs["message_id"]
         elif kwargs.get("conversation_message_id"): params["conversation_message_id"] = kwargs["conversation_message_id"]
+        if kwargs.get("disable_mentions"): params["disable_mentions"] = 1
         await self._internal_send(VK_API_EDIT, params)
 
     async def async_wall_post(self, **kwargs) -> ServiceResponse:
