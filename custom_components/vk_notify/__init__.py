@@ -1,3 +1,7 @@
+"""
+VK Notify (Keyboard Edition) __init__.py v1.1.0
+"""
+
 from __future__ import annotations
 
 import json
@@ -106,7 +110,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     # --- SEND MESSAGE ---
     async def handle_send_message(call: ServiceCall):
-        msg = f"{call.data['title']}\n{call.data['message']}" if call.data.get("title") else call.data["message"]
+        msg = f"{call.data['title']}\n\n{call.data['message']}" if call.data.get("title") else call.data["message"]
         clean_msg, fmt_data = parse_vk_formatting(msg, call.data.get("parse_mode", "html"))
         params = {"message": clean_msg}
         if fmt_data: params["format_data"] = fmt_data
