@@ -1,4 +1,4 @@
-# v1.5.0
+# v1.5.1 (UI Fix)
 send_message:
   name: "Отправить сообщение"
   description: Отправляет текстовое уведомление, медиа, координаты или карусель.
@@ -9,20 +9,20 @@ send_message:
   fields:
     title:
       name: Заголовок
-      description: Необязательный заголовок. Будет добавлен первой строкой с двойным отступом.
+      description: Необязательный заголовок. Будет добавлен первой строкой с двойным отступом перед сообщением.
       required: false
       selector:
-        text:
+        text: {}
     message:
       name: Сообщение
-      description: "Основной текст уведомления. Поддерживает Markdown (**жирный**, *курсив*) и HTML-теги для красивого форматирования."
+      description: "Основной текст уведомления. Поддерживает эмодзи и перенос строк."
       required: true
       selector:
         text:
           multiline: true
     parse_mode:
       name: Режим разбора
-      description: "Парсер текста сообщения. Смотрите параметры форматирования для более подробной информации."
+      description: "Парсер текста сообщения. Выберите «Обычный текст», чтобы отправить текст «как есть» без преобразования тегов."
       default: html
       selector:
         select:
@@ -41,51 +41,50 @@ send_message:
       description: "Готовая строка медиафайла из ВК, например: photo123_456 или doc-789_012."
       required: false
       selector:
-        text:
+        text: {}
     disable_mentions:
       name: Без звука для упоминаний
-      description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
+      description: "Отключает только специфический пуш об упоминании (@id)."
       required: false
       default: false
       selector:
-        boolean:
+        boolean: {}
     keyboard:
       name: Клавиатура
-      description: JSON-объект с кнопками (inline или обычными).
+      description: "JSON-объект с кнопками (inline или обычными)."
       required: false
       selector:
-        object:
+        object: {}
     template:
       name: Шаблон / Карусель (Template)
-      description: "JSON-объект карусели. По требованиям VK API должен содержать параметр 'type': 'carousel' и массив карточек 'elements' (не более 10 штук)."
+      description: "JSON-объект карусели. По требованиям VK API должен содержать параметр 'type': 'carousel' и массив карточек 'elements'."
       required: false
       selector:
-        object:
+        object: {}
     payload:
       name: Скрытые данные (Payload)
-      description: Невидимая строка данных, которая вернется боту при ответе или пересылке.
+      description: "Невидимая строка данных, которая вернется боту при ответе или пересылке."
       required: false
       selector:
-        text:
+        text: {}
     lat:
       name: Широта (Latitude)
       description: Координата широты для отправки геолокации.
       required: false
       selector:
-        text:
+        text: {}
     long:
       name: Долгота (Longitude)
       description: Координата долготы для отправки геолокации.
       required: false
       selector:
-        text:
+        text: {}
     reply_to:
       name: Ответить на сообщение
       description: Идентификатор сообщения (cmid) в беседе, на которое нужно ответить.
       required: false
       selector:
-        number:
-          mode: box
+        text: {}
 
 send_photo:
   name: "Отправить фото"
@@ -104,7 +103,7 @@ send_photo:
           multiline: true
     parse_mode:
       name: Режим разбора
-      description: "Парсер текста сообщения. Смотрите параметры форматирования для более подробной информации."
+      description: "Парсер текста сообщения."
       default: html
       selector:
         select:
@@ -123,36 +122,34 @@ send_photo:
       description: Например, /config/www/image.jpg
       required: false
       selector:
-        text:
+        text: {}
     url:
       name: URL картинки
       description: Прямая ссылка на картинку в интернете.
       required: false
       selector:
-        text:
+        text: {}
     disable_mentions:
       name: Без звука для упоминаний
-      description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
       required: false
       default: false
       selector:
-        boolean:
+        boolean: {}
     payload:
       name: Скрытые данные (Payload)
       required: false
       selector:
-        text:
+        text: {}
     keyboard:
       name: Клавиатура
       required: false
       selector:
-        object:
+        object: {}
     reply_to:
       name: Ответить на сообщение
       required: false
       selector:
-        number:
-          mode: box
+        text: {}
 
 send_file:
   name: "Отправить файл"
@@ -167,7 +164,7 @@ send_file:
       description: Локальный путь к отправляемому файлу.
       required: true
       selector:
-        text:
+        text: {}
     message:
       name: Подпись к файлу
       required: false
@@ -176,7 +173,7 @@ send_file:
           multiline: true
     parse_mode:
       name: Режим разбора
-      description: "Парсер текста сообщения. Смотрите параметры форматирования для более подробной информации."
+      description: "Парсер текста сообщения."
       default: html
       selector:
         select:
@@ -192,27 +189,25 @@ send_file:
               value: plain
     disable_mentions:
       name: Без звука для упоминаний
-      description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
       required: false
       default: false
       selector:
-        boolean:
+        boolean: {}
     payload:
       name: Скрытые данные (Payload)
       required: false
       selector:
-        text:
+        text: {}
     keyboard:
       name: Клавиатура
       required: false
       selector:
-        object:
+        object: {}
     reply_to:
       name: Ответить на сообщение
       required: false
       selector:
-        number:
-          mode: box
+        text: {}
 
 send_voice:
   name: "Отправить голосовое сообщение"
@@ -226,7 +221,7 @@ send_voice:
       name: Локальный путь к аудиофайлу
       required: true
       selector:
-        text:
+        text: {}
     message:
       name: Текст
       description: Текст, который будет отправлен вместе с аудио.
@@ -236,7 +231,7 @@ send_voice:
           multiline: true
     parse_mode:
       name: Режим разбора
-      description: "Парсер текста сообщения. Смотрите параметры форматирования для более подробной информации."
+      description: "Парсер текста сообщения."
       default: html
       selector:
         select:
@@ -252,27 +247,25 @@ send_voice:
               value: plain
     disable_mentions:
       name: Без звука для упоминаний
-      description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
       required: false
       default: false
       selector:
-        boolean:
+        boolean: {}
     payload:
       name: Скрытые данные (Payload)
       required: false
       selector:
-        text:
+        text: {}
     keyboard:
       name: Клавиатура
       required: false
       selector:
-        object:
+        object: {}
     reply_to:
       name: Ответить на сообщение
       required: false
       selector:
-        number:
-          mode: box
+        text: {}
 
 wall_post:
   name: "Опубликовать на стене"
@@ -292,7 +285,7 @@ wall_post:
       name: Локальный путь к фото
       required: false
       selector:
-        text:
+        text: {}
 
 edit_message:
   name: "Редактировать сообщение"
@@ -310,7 +303,7 @@ edit_message:
           multiline: true
     parse_mode:
       name: Режим разбора
-      description: "Парсер текста сообщения. Смотрите параметры форматирования для более подробной информации."
+      description: "Парсер текста сообщения."
       default: html
       selector:
         select:
@@ -328,31 +321,28 @@ edit_message:
       name: Идентификатор сообщения (В личных сообщениях)
       required: false
       selector:
-        number:
-          mode: box
+        text: {}
     conversation_message_id:
       name: Идентификатор сообщения (В беседе)
       required: false
       selector:
-        number:
-          mode: box
+        text: {}
     attachment:
       name: Новое вложение
       description: Строка медиа (photo123_456). Передайте пустую строку для удаления вложения.
       required: false
       selector:
-        text:
+        text: {}
     keyboard:
       name: Новая клавиатура
       required: false
       selector:
-        object:
+        object: {}
     disable_mentions:
       name: Без звука для упоминаний
-      description: "Отключает только специфический пуш об упоминании (@id). Внимание: стандартное уведомление о новом сообщении всё равно придет, если звук в чате не отключен."
       required: false
       selector:
-        boolean:
+        boolean: {}
 
 delete_message:
   name: "Удалить сообщение"
@@ -366,8 +356,7 @@ delete_message:
       name: Идентификатор сообщения (cmid)
       required: true
       selector:
-        number:
-          mode: box
+        text: {}
 
 send_sticker:
   name: "Отправить стикер"
@@ -381,17 +370,13 @@ send_sticker:
       name: ID Стикера
       description: Порядковый номер стикера (например, 3 - собака Спотти).
       required: true
-      example: 3
       selector:
-        number:
-          min: 1
-          mode: box
+        text: {}
     reply_to:
       name: Ответить на сообщение
       required: false
       selector:
-        number:
-          mode: box
+        text: {}
 
 edit_chat:
   name: "Изменить название беседы"
@@ -405,9 +390,8 @@ edit_chat:
       name: Новое название
       description: Поддерживает эмодзи.
       required: true
-      example: "🔴 ОХРАНА | Дом 190"
       selector:
-        text:
+        text: {}
 
 get_user_info:
   name: "Получить инфо о пользователе"
@@ -421,9 +405,8 @@ get_user_info:
       name: VK ID пользователя
       description: Цифровой ID пользователя (или from_id из события).
       required: true
-      example: "123456789"
       selector:
-        text:
+        text: {}
 
 set_activity:
   name: "Статус активности"
@@ -457,8 +440,7 @@ send_reaction:
       description: На какое сообщение поставить реакцию?
       required: true
       selector:
-        number:
-          mode: box
+        text: {}
     reaction_id:
       name: Реакция
       description: Выберите эмоцию.
@@ -487,8 +469,7 @@ pin_message:
       name: Идентификатор сообщения (cmid)
       required: true
       selector:
-        number:
-          mode: box
+        text: {}
 
 unpin_message:
   name: "Открепить сообщение"
@@ -502,8 +483,7 @@ unpin_message:
       name: Идентификатор сообщения (cmid)
       required: false
       selector:
-        number:
-          mode: box
+        text: {}
 
 answer_callback:
   name: "Ответить на нажатие (Снэкбар)"
@@ -518,16 +498,16 @@ answer_callback:
       description: "Идентификатор события (из trigger.event.data.event_id)."
       required: true
       selector:
-        text:
+        text: {}
     user_id:
       name: User ID
       description: "VK ID пользователя, нажавшего кнопку (из trigger.event.data.user_id)."
       required: true
       selector:
-        text:
+        text: {}
     message:
       name: Текст (Снэкбар)
       description: "Текст уведомления (максимум 90 символов). Если оставить пустым, кнопка просто перестанет крутиться."
       required: false
       selector:
-        text:
+        text: {}
