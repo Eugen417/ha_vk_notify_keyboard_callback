@@ -889,6 +889,94 @@ actions:
 
 </details>
 
+### 13. Пример работы новых функций v1.5.0 (Снэкбары и Открепление)
+
+Эта автоматизация — наглядная демонстрация новых интерактивных фишек интеграции. В одном сценарии показана отправка сообщения, создание callback-клавиатуры, чтение ID отправленного сообщения, его закрепление, а затем — реакция на нажатие кнопки со всплывающим Снэкбаром, открепление и динамическое очищение кнопок.
+
+⚠️ **Внимание:** Перед копированием не забудьте заменить `notify.vk_notify_2000000003` во всех блоках на вашу реальную службу (содержащую ваш `peer_id`).
+
+<details>
+  <summary><b>👨‍💻 Показать код YAML</b></summary>
+
+```yaml
+alias: "VK: Тест новых функций v1.5.0 (Снэкбар и Unpin)"
+description: Запустите автоматизацию вручную, чтобы получить тестовую кнопку.
+triggers:
+  - trigger: event
+    event_type: vk_notify_callback
+    id: button_click
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger is not defined or trigger.id != 'button_click' }}"
+        sequence:
+          - action: vk_notify.send_message
+            target:
+              entity_id: notify.vk_notify_2000000003
+            data:
+              title: 🛠 Тест версии 1.5.0
+              message: >-
+                Я прислал тебе кнопку. Нажми её, чтобы проверить новые нативные Снэкбары!
+
+
+                📌 <i>Кстати, я сейчас закреплю это сообщение.</i>
+              parse_mode: html
+              keyboard:
+                inline: true
+                buttons:
+                  - - action:
+                        type: callback
+                        label: 🪄 Испытать магию!
+                        payload: "{\"action\": \"test_new_features\"}"
+                      color: positive
+            response_variable: test_msg
+          - delay: "00:00:02"
+          - action: vk_notify.pin_message
+            target:
+              entity_id: notify.vk_notify_2000000003
+            data:
+              conversation_message_id: >
+                {% set r = test_msg.values() | first | default({}) %} {{
+                r.get('conversation_message_id', 0) }}
+      - conditions:
+          - condition: trigger
+            id: button_click
+          - condition: template
+            value_template: >-
+              {% set p = trigger.event.data.payload | default({}) %} {% set
+              payload_data = p | from_json if p is string else p %} {{
+              payload_data.get('action') == 'test_new_features' }}
+        sequence:
+          - action: vk_notify.answer_callback
+            target:
+              entity_id: notify.vk_notify_2000000003
+            data:
+              event_id: "{{ trigger.event.data.event_id }}"
+              user_id: "{{ trigger.event.data.user_id }}"
+              message: 🚀 Магия работает! Сообщение откреплено.
+          - action: vk_notify.unpin_message
+            target:
+              entity_id: notify.vk_notify_2000000003
+            data:
+              conversation_message_id: "{{ trigger.event.data.conversation_message_id }}"
+          - action: vk_notify.edit_message
+            target:
+              entity_id: notify.vk_notify_2000000003
+            data:
+              conversation_message_id: "{{ trigger.event.data.conversation_message_id }}"
+              message: |-
+                ✅ <b>Тест успешно завершен!</b>
+
+                Вы увидели снэкбар, а это сообщение пропало из закрепа чата.
+              parse_mode: html
+              keyboard:
+                inline: true
+                buttons: []
+mode: parallel
+```
+</details>
+
 ---
 
 ## Новые возможности начиная с версии v1.0.2
