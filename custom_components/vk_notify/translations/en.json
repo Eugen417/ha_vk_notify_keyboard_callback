@@ -2,57 +2,57 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up VK Notify",
-        "description": "Enter your VK community bot token.\n\n[Documentation]({docs_url})",
+        "title": "Настройка VK Notify",
+        "description": "Введите токен бота сообщества VK.\n\n[Документация]({docs_url})",
         "data": {
-          "access_token": "Access Token",
-          "name": "Name"
+          "access_token": "Токен доступа",
+          "name": "Название"
         },
         "data_description": {
-          "access_token": "VK community bot token with Messages permission",
-          "name": "Friendly name for this notification entity"
+          "access_token": "Токен бота сообщества VK с правом на отправку сообщений",
+          "name": "Отображаемое имя уведомителя"
         }
       },
       "select_mode": {
-        "title": "Connection mode",
-        "description": "Choose how the integration connects to VK.",
+        "title": "Режим подключения",
+        "description": "Выберите способ подключения интеграции к VK.",
         "data": {
-          "mode": "Mode"
+          "mode": "Режим"
         }
       },
       "select_chat": {
-        "title": "Select chat",
-        "description": "Select the chat to send notifications to.\n\nIf the desired chat is not in the list, the recipient must first send a message to the community.",
+        "title": "Выберите чат",
+        "description": "Выберите чат, в который будут отправляться уведомления.\n\nЕсли нужного чата нет в списке, получатель должен первым написать сообщение сообществу.",
         "data": {
-          "peer_id": "Chat"
+          "peer_id": "Чат"
         }
       },
       "reconfigure": {
-        "title": "Change chat",
-        "description": "Select a new chat to send notifications to.",
+        "title": "Изменить чат",
+        "description": "Выберите новый чат для отправки уведомлений.",
         "data": {
-          "peer_id": "Chat"
+          "peer_id": "Чат"
         }
       }
     },
     "error": {
-      "invalid_token": "Invalid access token or API error. Please check your token.",
-      "cannot_connect": "Failed to connect to VK API.",
-      "no_conversations": "No conversations found. Make sure the bot has at least one conversation.",
-      "group_id_required": "Could not detect community ID from the token. Make sure the token belongs to a community.",
-      "longpoll_no_access": "The token does not have permission to use Long Poll. Re-generate the community token with 'Community management' permission enabled.",
-      "chat_not_writable": "The bot cannot send messages to this chat. Select a different chat."
+      "invalid_token": "Неверный токен доступа или ошибка API. Проверьте токен.",
+      "cannot_connect": "Не удалось подключиться к VK API.",
+      "no_conversations": "Чаты не найдены. Убедитесь, что бот участвует хотя бы в одном чате.",
+      "group_id_required": "Не удалось определить ID сообщества из токена. Проверьте, что токен принадлежит сообществу.",
+      "longpoll_no_access": "Токен не имеет права использовать Long Poll. Перегенерируйте токен сообщества с включённым разрешением «Управление сообществом».",
+      "chat_not_writable": "Бот не может отправлять сообщения в этот чат. Выберите другой чат."
     },
     "abort": {
-      "already_configured": "This VK Notify instance is already configured.",
-      "reconfigure_successful": "Re-configuration was successful."
+      "already_configured": "Этот экземпляр VK Notify уже настроен.",
+      "reconfigure_successful": "Настройка успешно обновлена."
     }
   },
   "selector": {
     "mode": {
       "options": {
-        "api": "API — send only",
-        "longpoll": "Long Poll — send and receive incoming messages as HA events"
+        "api": "API — только отправка",
+        "longpoll": "Long Poll — отправка и получение входящих сообщений как событий HA"
       }
     }
   },
@@ -376,6 +376,42 @@
         "reply_to": {
           "name": "Reply to message",
           "description": "Message ID (cmid) in the chat to reply to."
+        }
+      }
+    },
+    "unpin_message": {
+      "name": "Unpin message",
+      "description": "Unpins a message in the chat. If no ID is provided, unpins the currently pinned message.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity."
+        },
+        "conversation_message_id": {
+          "name": "Conversation Message ID",
+          "description": "Message ID within the chat (cmid). If empty, unpins the last pinned message."
+        }
+      }
+    },
+    "answer_callback": {
+      "name": "Answer Callback (Snackbar)",
+      "description": "Stops the loading spinner on an inline button and optionally shows a snackbar notification.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity",
+          "description": "VK Notify entity."
+        },
+        "event_id": {
+          "name": "Event ID",
+          "description": "Event ID from trigger.event.data.event_id."
+        },
+        "user_id": {
+          "name": "User ID",
+          "description": "VK ID of the user who clicked the button (from trigger.event.data.user_id)."
+        },
+        "message": {
+          "name": "Message (Snackbar)",
+          "description": "Text to display in the snackbar (max 90 chars). If empty, the button just stops spinning."
         }
       }
     }
