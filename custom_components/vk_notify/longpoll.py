@@ -1,5 +1,6 @@
 """
-VK Notify (Keyboard Edition) longpoll.py v1.5.0
+VK Notify (Keyboard Edition) longpoll.py v1.5.1
+Added: Detected "_ha_auto" flag for automatic spinner killing.
 """
 from __future__ import annotations
 
@@ -70,14 +71,12 @@ class VkLongPollManager:
             msg = obj.get("message", {})
             peer_id, text, from_id = msg.get("peer_id"), msg.get("text", ""), msg.get("from_id")
             ent_id = self._find_entity_id(peer_id) or "not_configured"
-            
             base = {"peer_id": peer_id, "entity_id": ent_id, "text": text, "from_id": from_id, "conversation_message_id": msg.get("conversation_message_id")}
             if text.startswith("/"):
                 cmd_parts = text.split()
                 self._hass.bus.async_fire(f"{DOMAIN}_command", {**base, "command": cmd_parts[0][1:] if cmd_parts else ""})
             else:
                 self._hass.bus.async_fire(f"{DOMAIN}_text", base)
-            
             self._hass.async_create_task(self._mark_as_read(peer_id, msg.get("id")))
 
         elif upd_type == "message_event":
@@ -88,10 +87,16 @@ class VkLongPollManager:
                 except ValueError: pass
 
             ent_id = self._find_entity_id(peer_id) or "not_configured"
+            
+            # ОТПРАВЛЯЕМ СОБЫТИЕ В HA
             self._hass.bus.async_fire(f"{DOMAIN}_callback", {
                 "payload": payload, "peer_id": peer_id, "entity_id": ent_id, "user_id": user_id, 
                 "event_id": event_id, "conversation_message_id": obj.get("conversation_message_id")
             })
+            
+            # АВТО-ОТВЕТ: Если в пейлоаде есть наша пометка — гасим кружок моментально
+            if isinstance(payload, dict) and payload.get("_ha_auto"):
+                self._hass.async_create_task(self._auto_answer_callback(event_id, user_id, peer_id))
 
         elif upd_type == "message_typing_state":
             peer_id = obj.get("from_id")
@@ -114,4 +119,13 @@ class VkLongPollManager:
     async def _mark_as_read(self, peer_id: int, msg_id: int) -> None:
         session = async_get_clientsession(self._hass)
         try: await session.get(VK_API_MARK_AS_READ, params={"access_token": self._access_token, "peer_id": peer_id, "start_message_id": msg_id, "v": VK_API_VERSION})
+        except Exception: pass
+
+    async def _auto_answer_callback(self, event_id: str, user_id: int, peer_id: int) -> None:
+        session = async_get_clientsession(self._hass)
+        try:
+            await session.post("https://api.vk.com/method/messages.sendMessageEventAnswer", data={
+                "access_token": self._access_token, "v": VK_API_VERSION,
+                "event_id": event_id, "user_id": user_id, "peer_id": peer_id
+            })
         except Exception: pass
