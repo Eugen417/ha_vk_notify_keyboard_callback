@@ -1,4 +1,4 @@
-# v1.5.1 (UI Fix)
+# v1.5.1 (Terminology & Full UI Descriptions Update)
 send_message:
   name: "Отправить сообщение"
   description: Отправляет текстовое уведомление, медиа, координаты или карусель.
@@ -47,6 +47,26 @@ send_message:
       description: "Отключает только специфический пуш об упоминании (@id)."
       required: false
       default: false
+      selector:
+        boolean: {}
+    inline_keyboard:
+      name: "Инлайн-клавиатура / Меню (клавиатура)"
+      description: >
+        ВКЛ Инлайн-клавиатура: Кнопки «встроены» прямо в само сообщение (в тот же пузырь, где текст). 
+        Они «тихие», потому что позволяют использовать тип callback, который не спамит текстом в чат. 
+        При прокрутке истории такие кнопки уезжают вверх вместе с сообщением.
+        ВЫКЛ Меню (Обычная клавиатура): Это те самые кнопки, которые заменяют собой стандартную клавиатуру 
+        телефона в нижней части экрана. Они «висят» внизу, пока ты их не удалишь или не заменишь на другие, 
+        независимо от того, как далеко ты прокрутил чат.
+      required: false
+      default: true
+      selector:
+        boolean: {}
+    auto_answer_callback:
+      name: Автоматически гасить кружок (Spinner)
+      description: "ВКЛ (Рекомендуется): Интеграция сама мгновенно остановит загрузку на кнопке. ВЫКЛ: Кружок будет висеть, пока вы не ответите службой 'answer_callback' в автоматизации (нужно для Снэкбаров)."
+      required: false
+      default: true
       selector:
         boolean: {}
     keyboard:
@@ -140,6 +160,16 @@ send_photo:
       required: false
       selector:
         text: {}
+    inline_keyboard:
+      name: "Инлайн-клавиатура / Меню (клавиатура)"
+      default: true
+      selector:
+        boolean: {}
+    auto_answer_callback:
+      name: Автоматически гасить кружок
+      default: true
+      selector:
+        boolean: {}
     keyboard:
       name: Клавиатура
       required: false
@@ -198,6 +228,16 @@ send_file:
       required: false
       selector:
         text: {}
+    inline_keyboard:
+      name: "Инлайн-клавиатура / Меню (клавиатура)"
+      default: true
+      selector:
+        boolean: {}
+    auto_answer_callback:
+      name: Автоматически гасить кружок
+      default: true
+      selector:
+        boolean: {}
     keyboard:
       name: Клавиатура
       required: false
@@ -256,6 +296,16 @@ send_voice:
       required: false
       selector:
         text: {}
+    inline_keyboard:
+      name: "Инлайн-клавиатура / Меню (клавиатура)"
+      default: true
+      selector:
+        boolean: {}
+    auto_answer_callback:
+      name: Автоматически гасить кружок
+      default: true
+      selector:
+        boolean: {}
     keyboard:
       name: Клавиатура
       required: false
@@ -438,12 +488,6 @@ send_reaction:
     conversation_message_id:
       name: Идентификатор сообщения (cmid)
       description: На какое сообщение поставить реакцию?
-      required: true
-      selector:
-        text: {}
-    reaction_id:
-      name: Реакция
-      description: Выберите эмоцию.
       required: true
       selector:
         select:
