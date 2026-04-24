@@ -1,5 +1,6 @@
 """
-VK Notify (Keyboard Edition) helpers.py v1.0.9 fix MarkdownV2
+VK Notify (Keyboard Edition) helpers.py v1.5.0
+Cleaned: Removed native video upload. Kept MarkdownV2, Photo, and File logic.
 """
 
 from __future__ import annotations
@@ -11,26 +12,28 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import VK_API_DOC_SAVE, VK_API_DOC_UPLOAD_SERVER, VK_API_PHOTO_SAVE, VK_API_PHOTO_UPLOAD_SERVER, VK_API_VERSION
+from .const import (
+    VK_API_DOC_SAVE, 
+    VK_API_DOC_UPLOAD_SERVER, 
+    VK_API_PHOTO_SAVE, 
+    VK_API_PHOTO_UPLOAD_SERVER, 
+    VK_API_VERSION
+)
 
 # ==========================================
 # 1. ФУНКЦИИ ФОРМАТИРОВАНИЯ ТЕКСТА
 # ==========================================
 
 def encode_utf16_len(s: str) -> int:
-    """Возвращает длину строки в единицах UTF-16 (как ожидает VK API)."""
     return len(s.encode('utf-16-le')) // 2
 
 def parse_vk_formatting(text: str, parse_mode: str = "html") -> tuple[str, str | None]:
-    """Преобразует Markdown/HTML в чистый текст и JSON-объект format_data."""
     if not isinstance(text, str):
         return str(text), None
 
-    # ЕСЛИ ВЫБРАН ОБЫЧНЫЙ ТЕКСТ - ПРЕРЫВАЕМ ФОРМАТИРОВАНИЕ
     if parse_mode == "plain":
         return text.strip(), None
 
-    # 🔥 НАШ НОВЫЙ ПАТЧ: Если это MarkdownV2, удаляем слеши-невидимки перед спецсимволами
     if parse_mode == "markdownv2":
         text = re.sub(r'\\([_*\[\]()~`>#+\-=|{}.!])', r'\1', text)
 
@@ -51,7 +54,6 @@ def parse_vk_formatting(text: str, parse_mode: str = "html") -> tuple[str, str |
     
     for match in pattern.finditer(text):
         start, end = match.span()
-        
         chunk = text[current_pos:start]
         clean_text += chunk
         utf16_offset += encode_utf16_len(chunk)
@@ -93,56 +95,80 @@ def parse_vk_formatting(text: str, parse_mode: str = "html") -> tuple[str, str |
     return clean_text.strip(), format_data
 
 # ==========================================
-# 2. ФУНКЦИИ ЗАГРУЗКИ ФАЙЛОВ И МЕДИА
+# 2. ФУНКЦИИ ЗАГРУЗКИ МЕДИАФАЙЛОВ
 # ==========================================
 
-async def async_upload_photo(
-    hass: HomeAssistant, access_token: str, peer_id: int, url: str | None = None, filepath: str | None = None
-) -> str:
+async def async_upload_photo(hass: HomeAssistant, access_token: str, peer_id: int, url: str | None = None, filepath: str | None = None) -> str:
+    """Загрузка фотографии в ВК."""
     session = async_get_clientsession(hass)
-    async with session.get(VK_API_PHOTO_UPLOAD_SERVER, params={"access_token": access_token, "peer_id": peer_id, "v": VK_API_VERSION}) as resp:
+    
+    async with session.get(VK_API_PHOTO_UPLOAD_SERVER, params={
+        "access_token": access_token, "peer_id": peer_id, "v": VK_API_VERSION
+    }) as resp:
         data = await resp.json()
-    if "error" in data: raise HomeAssistantError(f"VK API error (getMessagesUploadServer): {data['error']}")
+    if "error" in data: raise HomeAssistantError(f"VK API error (photos.getMessagesUploadServer): {data['error']}")
+    
     upload_url = data["response"]["upload_url"]
+    form = aiohttp.FormData()
 
     if url:
-        async with session.get(url, ssl=False) as resp: photo_bytes = await resp.read()
-        filename = url.rstrip("/").split("/")[-1] or "photo.jpg"
+        async with session.get(url) as img_resp:
+            form.add_field("photo", await img_resp.read(), filename="image.jpg")
+    elif filepath:
+        if not hass.config.is_allowed_path(filepath):
+            raise HomeAssistantError(f"Path '{filepath}' not allowed.")
+        file_bytes = await hass.async_add_executor_job(lambda: open(filepath, "rb").read())
+        form.add_field("photo", file_bytes, filename=filepath.split("/")[-1])
     else:
-        if not hass.config.is_allowed_path(filepath): raise HomeAssistantError(f"Path '{filepath}' not allowed.")
-        photo_bytes = await hass.async_add_executor_job(lambda: open(filepath, "rb").read())
-        filename = filepath.split("/")[-1]
+        raise HomeAssistantError("Neither URL nor filepath provided for photo upload.")
 
-    form = aiohttp.FormData()
-    form.add_field("photo", photo_bytes, filename=filename, content_type="image/jpeg")
-    async with session.post(upload_url, data=form) as resp: upload_result = await resp.json()
+    async with session.post(upload_url, data=form) as resp:
+        upload_result = await resp.json()
 
-    async with session.get(VK_API_PHOTO_SAVE, params={"access_token": access_token, "v": VK_API_VERSION, "server": upload_result["server"], "photo": upload_result["photo"], "hash": upload_result["hash"]}) as resp:
+    if "error" in upload_result or not upload_result.get("photo"):
+        raise HomeAssistantError(f"Photo upload error: {upload_result}")
+
+    async with session.post(VK_API_PHOTO_SAVE, data={
+        "access_token": access_token, "v": VK_API_VERSION,
+        "photo": upload_result["photo"], "server": upload_result["server"], "hash": upload_result["hash"]
+    }) as resp:
         data = await resp.json()
-    if "error" in data: raise HomeAssistantError(f"VK API error (saveMessagesPhoto): {data['error']}")
+        
+    if "error" in data: raise HomeAssistantError(f"VK API error (photos.saveMessagesPhoto): {data['error']}")
 
     photo = data["response"][0]
-    return f"photo{photo['owner_id']}_{photo['id']}"
+    access_key = photo.get("access_key", "")
+    return f"photo{photo['owner_id']}_{photo['id']}{'_' + access_key if access_key else ''}"
 
 async def async_upload_file(hass: HomeAssistant, access_token: str, peer_id: int, filepath: str) -> str:
+    """Загрузка документов и голосовых сообщений."""
     session = async_get_clientsession(hass)
-    if not hass.config.is_allowed_path(filepath): raise HomeAssistantError(f"Path '{filepath}' not allowed.")
+    if not hass.config.is_allowed_path(filepath):
+        raise HomeAssistantError(f"Path '{filepath}' not allowed.")
+        
     doc_type = "audio_message" if filepath.lower().endswith(".ogg") else "doc"
 
-    async with session.get(VK_API_DOC_UPLOAD_SERVER, params={"access_token": access_token, "peer_id": peer_id, "type": doc_type, "v": VK_API_VERSION}) as resp:
+    async with session.get(VK_API_DOC_UPLOAD_SERVER, params={
+        "access_token": access_token, "peer_id": peer_id, "type": doc_type, "v": VK_API_VERSION
+    }) as resp:
         data = await resp.json()
-    if "error" in data: raise HomeAssistantError(f"VK API error: {data['error']}")
+    if "error" in data: raise HomeAssistantError(f"VK API error (docs.getUploadServer): {data['error']}")
+    
     upload_url = data["response"]["upload_url"]
-
     filename = filepath.split("/")[-1]
     file_bytes = await hass.async_add_executor_job(lambda: open(filepath, "rb").read())
+    
     form = aiohttp.FormData()
     form.add_field("file", file_bytes, filename=filename)
-    async with session.post(upload_url, data=form) as resp: upload_result = await resp.json()
+    
+    async with session.post(upload_url, data=form) as resp:
+        upload_result = await resp.json()
 
-    async with session.get(VK_API_DOC_SAVE, params={"access_token": access_token, "v": VK_API_VERSION, "file": upload_result["file"], "title": filename}) as resp:
+    async with session.get(VK_API_DOC_SAVE, params={
+        "access_token": access_token, "v": VK_API_VERSION, "file": upload_result["file"], "title": filename
+    }) as resp:
         data = await resp.json()
-    if "error" in data: raise HomeAssistantError(f"VK API error: {data['error']}")
+    if "error" in data: raise HomeAssistantError(f"VK API error (docs.save): {data['error']}")
 
     response = data["response"]
     obj = response.get("doc") or response.get("audio_message")
