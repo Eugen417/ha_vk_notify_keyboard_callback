@@ -1,4 +1,4 @@
-# v1.0.9
+# v1.5.0
 send_message:
   name: "Отправить сообщение"
   description: Отправляет текстовое уведомление, медиа, координаты или карусель.
@@ -9,7 +9,7 @@ send_message:
   fields:
     title:
       name: Заголовок
-      description: Необязательный заголовок. Будет добавлен первой строкой перед сообщением.
+      description: Необязательный заголовок. Будет добавлен первой строкой с двойным отступом.
       required: false
       selector:
         text:
@@ -489,3 +489,45 @@ pin_message:
       selector:
         number:
           mode: box
+
+unpin_message:
+  name: "Открепить сообщение"
+  description: "Открепляет сообщение в шапке беседы. Если ID не передан, открепит текущее закрепленное."
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
+  fields:
+    conversation_message_id:
+      name: Идентификатор сообщения (cmid)
+      required: false
+      selector:
+        number:
+          mode: box
+
+answer_callback:
+  name: "Ответить на нажатие (Снэкбар)"
+  description: "Останавливает загрузку на кнопке и (опционально) показывает всплывающее уведомление (снэкбар) в приложении ВК."
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
+  fields:
+    event_id:
+      name: Event ID
+      description: "Идентификатор события (из trigger.event.data.event_id)."
+      required: true
+      selector:
+        text:
+    user_id:
+      name: User ID
+      description: "VK ID пользователя, нажавшего кнопку (из trigger.event.data.user_id)."
+      required: true
+      selector:
+        text:
+    message:
+      name: Текст (Снэкбар)
+      description: "Текст уведомления (максимум 90 символов). Если оставить пустым, кнопка просто перестанет крутиться."
+      required: false
+      selector:
+        text:
