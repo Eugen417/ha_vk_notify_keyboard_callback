@@ -1,6 +1,6 @@
 """
 VK Notify (Keyboard Edition) v1.5.0
-Cleaned: Removed native video upload. Snackbar, Unpin, and Title spacing remain active.
+All services registered dynamically. Video upload removed.
 """
 from __future__ import annotations
 
@@ -21,7 +21,6 @@ from homeassistant.helpers import entity_platform
 from .const import CONF_ACCESS_TOKEN, CONF_PEER_ID, VK_API_VERSION
 from .helpers import async_upload_file, async_upload_photo, parse_vk_formatting
 
-# API Endpoints
 VK_API_SEND = "https://api.vk.com/method/messages.send"
 VK_API_EDIT = "https://api.vk.com/method/messages.edit"
 VK_API_DELETE = "https://api.vk.com/method/messages.delete"
@@ -127,13 +126,8 @@ class VkNotifyEntity(NotifyEntity):
     async def async_send_photo(self, **kwargs) -> ServiceResponse:
         clean_msg, fmt_data = parse_vk_formatting(kwargs.get("message", ""), kwargs.get("parse_mode", "html"))
         params = {"message": clean_msg}
-        
         if "url" in kwargs or "file" in kwargs:
-            params["attachment"] = await async_upload_photo(
-                self.hass, self._access_token, self._peer_id, 
-                url=kwargs.get("url"), filepath=kwargs.get("file")
-            )
-            
+            params["attachment"] = await async_upload_photo(self.hass, self._access_token, self._peer_id, url=kwargs.get("url"), filepath=kwargs.get("file"))
         if fmt_data: params["format_data"] = fmt_data
         self._apply_common_params(params, kwargs)
         self._prepare_reply(params, kwargs.get("reply_to"))
@@ -165,6 +159,12 @@ class VkNotifyEntity(NotifyEntity):
         if kwargs.get("message_id"): params["message_id"] = kwargs["message_id"]
         elif kwargs.get("conversation_message_id"): params["conversation_message_id"] = kwargs["conversation_message_id"]
         await self._internal_send(VK_API_EDIT, params)
+
+    async def async_wall_post(self, **kwargs) -> ServiceResponse:
+        clean_msg, _ = parse_vk_formatting(kwargs.get("message", ""), kwargs.get("parse_mode", "html"))
+        params = {"owner_id": f"-{self.hass.data['vk_notify'][self._entry.entry_id]['data']['group_id']}", "message": clean_msg}
+        if kwargs.get("file"): params["attachments"] = await async_upload_file(self.hass, self._access_token, self._peer_id, kwargs["file"])
+        return await self._internal_send(VK_API_WALL, params)
 
     async def async_delete_message(self, **kwargs) -> None:
         params = {"delete_for_all": 1}
