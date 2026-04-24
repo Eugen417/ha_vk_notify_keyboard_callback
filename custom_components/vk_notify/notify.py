@@ -1,5 +1,5 @@
 """
-VK Notify (Keyboard Edition) v1.2.9
+VK Notify (Keyboard Edition) v1.3.0
 Clean edition: Removed broken VK Polls API. Retained text formatting support.
 """
 from __future__ import annotations
@@ -118,7 +118,7 @@ class VkNotifyEntity(NotifyEntity):
         if "keyboard" in kwargs: params["keyboard"] = json.dumps(kwargs["keyboard"], ensure_ascii=False)
 
     async def async_send_message(self, message: str, title: str | None = None, **kwargs) -> ServiceResponse:
-        if title: message = f"{title}\n{message}"
+        if title: message = f"{title}\n\n{message}"
         clean_msg, fmt_data = parse_vk_formatting(message, kwargs.get("parse_mode", "html"))
         params = {"message": clean_msg}
         if fmt_data: params["format_data"] = fmt_data
