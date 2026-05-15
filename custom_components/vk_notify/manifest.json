@@ -1,6 +1,6 @@
 {
   "domain": "vk_notify",
-  "name": "VK Notify",
+  "name": "VK Notify (Keyboard Edition)",
   "codeowners": ["@Eugen417"],
   "config_flow": true,
   "documentation": "https://github.com/ha_vk_notify_keyboard_callback/ha_vk_notify",
