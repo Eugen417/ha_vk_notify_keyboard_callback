@@ -22,7 +22,9 @@
 
 ## 🛠 Установка
 
-### Через HACS
+### Автоматически
+
+Нажмите кнопку установить.
 
 [![Открыть в Home Assistant и установить VK Notify через HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Eugen417&repository=ha_vk_notify_keyboard_callback&category=integration)
 
