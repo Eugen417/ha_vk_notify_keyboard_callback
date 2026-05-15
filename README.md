@@ -6,7 +6,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/Eugen417/ha_vk_notify_keyboard_callback.svg?style=for-the-badge)](https://github.com/Eugen417/ha_vk_notify_keyboard_callback/stargazers)
 [![License](https://img.shields.io/github/license/Eugen417/ha_vk_notify_keyboard_callback.svg?style=for-the-badge)](https://github.com/Eugen417/ha_vk_notify_keyboard_callback/blob/main/LICENSE)
 
-## Внимание: v1.5.2 последняее обновление данного форка в дальнейшем обновляться будет только основная интеграция [VK Notify](https://github.com/udocs-ru/ha_vk_notify)
+## Внимание: v1.5.2 последнее обновление данного форка в дальнейшем обновляться будет только основная интеграция [VK Notify](https://github.com/udocs-ru/ha_vk_notify)
 
 Форк интеграции `VK Notify` для Home Assistant, превращающий обычного бота ВКонтакте в **интерактивный пульт управления умным домом**. 
 
