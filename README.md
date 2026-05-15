@@ -28,11 +28,11 @@
 
 Если кнопка не работает: добавьте репозиторий в HACS вручную (категория: Интеграция), установите "VK Notify (Keyboard Edition)" и перезапустите Home Assistant.
 
-### Вручную (без HACS)
+### Вручную
 
 1. Откройте **HACS** > **Integrations**.
 2. Нажмите три точки в верхнем правом углу > **Custom repositories**.
-3. Вставьте ссылку на ваш репозиторий: `https://github.com/Eugen417/ha_vk_notify_keyboard_callback`
+3. Вставьте ссылку на репозиторий: `https://github.com/Eugen417/ha_vk_notify_keyboard_callback`
 4. Выберите категорию **Integration** и нажмите **Add**.
 5. Установите появившуюся интеграцию **VK Notify (Keyboard Edition)**.
 6. Перезагрузите Home Assistant.
