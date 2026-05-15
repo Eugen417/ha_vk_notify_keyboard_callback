@@ -1,6 +1,7 @@
 """
-VK Notify (Keyboard Edition) v1.5.1
-Added: Dynamic auto_answer_callback injection into buttons.
+VK Notify v1.5.2 
+Fixed: Dynamic auto_answer_callback injection for Carousels (templates).
+Fixed: Safe payload parsing and default kwargs fallback.
 """
 from __future__ import annotations
 
@@ -42,7 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         vol.Optional("payload"): cv.string,
         vol.Optional("keyboard"): dict,
         vol.Optional("inline_keyboard"): cv.boolean,
-        vol.Optional("auto_answer_callback"): cv.boolean, # <-- НАШ ВЫКЛЮЧАТЕЛЬ
+        vol.Optional("auto_answer_callback"): cv.boolean,
         vol.Optional("reply_to"): cv.positive_int,
         vol.Optional("parse_mode", default="html"): vol.In(["html", "markdown", "markdownv2", "plain"])
     }
@@ -108,29 +109,52 @@ class VkNotifyEntity(NotifyEntity):
             params["forward"] = json.dumps({"peer_id": self._peer_id, "conversation_message_ids": [reply_to], "is_reply": 1}, ensure_ascii=False)
         else: params["reply_to"] = reply_to
 
+    def _inject_auto_answer(self, buttons_container: list) -> None:
+        """Рекурсивно ищет кнопки и безопасно инжектит флаг _ha_auto."""
+        for item in buttons_container:
+            if isinstance(item, list):
+                self._inject_auto_answer(item)
+            elif isinstance(item, dict):
+                if item.get("action", {}).get("type") == "callback":
+                    act = item["action"]
+                    p = act.get("payload", "{}")
+                    try:
+                        p_obj = json.loads(p) if isinstance(p, str) else p
+                        if not isinstance(p_obj, dict):
+                            p_obj = {"value": p_obj}
+                    except ValueError:
+                        p_obj = {"value": p}
+                    
+                    p_obj["_ha_auto"] = True
+                    act["payload"] = json.dumps(p_obj, ensure_ascii=False)
+
     def _apply_common_params(self, params: dict, kwargs: dict) -> None:
         if kwargs.get("disable_mentions"): params["disable_mentions"] = 1
         if "payload" in kwargs: params["payload"] = kwargs["payload"]
+        
+        # Получаем настройку (по умолчанию True, как в services.yaml)
+        auto_answer = kwargs.get("auto_answer_callback", True)
+        
+        # Обработка обычной клавиатуры
         if "keyboard" in kwargs:
             kb = kwargs["keyboard"]
             if isinstance(kb, dict):
-                # Управление инлайн-режимом
                 if "inline_keyboard" in kwargs: kb["inline"] = kwargs["inline_keyboard"]
                 elif "inline" not in kb: kb["inline"] = True
                 
-                # Умная пометка для АВТО-ОТВЕТА
-                if kwargs.get("auto_answer_callback"):
-                    for row in kb.get("buttons", []):
-                        for btn in row:
-                            if btn.get("action", {}).get("type") == "callback":
-                                act = btn["action"]
-                                # Инжектируем флаг в payload каждой кнопки
-                                p = act.get("payload", "{}")
-                                p_obj = json.loads(p) if isinstance(p, str) else p
-                                p_obj["_ha_auto"] = True
-                                act["payload"] = json.dumps(p_obj, ensure_ascii=False)
-                                
+                if auto_answer:
+                    self._inject_auto_answer(kb.get("buttons", []))
+                        
             params["keyboard"] = json.dumps(kb, ensure_ascii=False)
+            
+        # Обработка каруселей (Template)
+        if "template" in kwargs:
+            tpl = kwargs["template"]
+            if auto_answer and isinstance(tpl, dict) and "elements" in tpl:
+                for el in tpl.get("elements", []):
+                    if "buttons" in el:
+                        self._inject_auto_answer(el["buttons"])
+            params["template"] = json.dumps(tpl, ensure_ascii=False)
 
     async def async_send_message(self, message: str, title: str | None = None, **kwargs) -> ServiceResponse:
         if title: message = f"{title}\n\n{message}"
@@ -138,8 +162,6 @@ class VkNotifyEntity(NotifyEntity):
         params = {"message": clean_msg}
         if fmt_data: params["format_data"] = fmt_data
         if "attachment" in kwargs: params["attachment"] = kwargs["attachment"]
-        if "template" in kwargs: params["template"] = json.dumps(kwargs["template"], ensure_ascii=False)
-        if "lat" in kwargs: params["lat"], params["long"] = kwargs["lat"], kwargs["long"]
         self._apply_common_params(params, kwargs)
         self._prepare_reply(params, kwargs.get("reply_to"))
         return await self._internal_send(VK_API_SEND, params)

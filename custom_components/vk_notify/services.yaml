@@ -1,4 +1,4 @@
-# v1.5.1 (Terminology & Full UI Descriptions Update)
+# VK Notify services.yaml v1.5.2 (Terminology & Full UI Descriptions Update)
 send_message:
   name: "Отправить сообщение"
   description: Отправляет текстовое уведомление, медиа, координаты или карусель.

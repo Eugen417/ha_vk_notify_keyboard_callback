@@ -1,5 +1,5 @@
 """
-VK Notify (Keyboard Edition) __init__.py v1.5.0
+VK Notify  __init__.py v1.5.2
 Cleaned: All services moved to notify.py
 """
 from __future__ import annotations

@@ -1,5 +1,5 @@
 """
-VK Notify (Keyboard Edition) helpers.py v1.5.0
+VK Notify  helpers.py v1.5.2
 Cleaned: Removed native video upload. Kept MarkdownV2, Photo, and File logic.
 """
 

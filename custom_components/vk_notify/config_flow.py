@@ -1,3 +1,6 @@
+"""
+VK Notify config_flow.py v1.5.2
+"""
 from __future__ import annotations
 
 import voluptuous as vol

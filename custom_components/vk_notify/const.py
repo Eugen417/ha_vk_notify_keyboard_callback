@@ -1,3 +1,8 @@
+"""
+VK Notify  __init__.py v1.5.2
+Cleaned: All services moved to const.py
+"""
+
 DOMAIN = "vk_notify"
 
 CONF_ACCESS_TOKEN = "access_token"
