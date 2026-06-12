@@ -1,13 +1,16 @@
 """
-VK Notify  helpers.py v1.5.2
-Cleaned: Removed native video upload. Kept MarkdownV2, Photo, and File logic.
+VK Notify helpers.py v1.6.1
+Added: Dynamic timeout support for all upload operations.
+Fixed: Syntax error in imports.
 """
-
 from __future__ import annotations
 
 import aiohttp
 import re
 import json
+import logging
+import ipaddress
+from urllib.parse import urlparse
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -19,6 +22,20 @@ from .const import (
     VK_API_PHOTO_UPLOAD_SERVER, 
     VK_API_VERSION
 )
+
+_LOGGER = logging.getLogger(__name__)
+
+def is_local_url(url: str) -> bool:
+    """Проверяет, является ли URL локальным (192.168.x.x, 10.x.x.x и т.д.)."""
+    try:
+        host = urlparse(url).hostname
+        if not host: 
+            return False
+        if host in ("localhost", "127.0.0.1"): 
+            return True
+        return ipaddress.ip_address(host).is_private
+    except ValueError:
+        return False
 
 # ==========================================
 # 1. ФУНКЦИИ ФОРМАТИРОВАНИЯ ТЕКСТА
@@ -98,32 +115,48 @@ def parse_vk_formatting(text: str, parse_mode: str = "html") -> tuple[str, str |
 # 2. ФУНКЦИИ ЗАГРУЗКИ МЕДИАФАЙЛОВ
 # ==========================================
 
-async def async_upload_photo(hass: HomeAssistant, access_token: str, peer_id: int, url: str | None = None, filepath: str | None = None) -> str:
-    """Загрузка фотографии в ВК."""
-    session = async_get_clientsession(hass)
+def _read_file_safe(path: str) -> bytes:
+    with open(path, "rb") as f:
+        return f.read()
+
+async def async_upload_photo(hass: HomeAssistant, access_token: str, peer_id: int, url: str | None = None, filepath: str | None = None, verify_ssl: bool = True, timeout: int = 60) -> str:
+    bypass_ssl = (not verify_ssl) or (url and is_local_url(url))
+    session = async_get_clientsession(hass, verify_ssl=(not bypass_ssl))
+    timeout_ctx = aiohttp.ClientTimeout(total=timeout)
     
     async with session.get(VK_API_PHOTO_UPLOAD_SERVER, params={
         "access_token": access_token, "peer_id": peer_id, "v": VK_API_VERSION
-    }) as resp:
+    }, timeout=timeout_ctx) as resp:
         data = await resp.json()
-    if "error" in data: raise HomeAssistantError(f"VK API error (photos.getMessagesUploadServer): {data['error']}")
+    if "error" in data: 
+        raise HomeAssistantError(f"VK API error (getUploadServer): {data['error']}")
     
     upload_url = data["response"]["upload_url"]
     form = aiohttp.FormData()
 
     if url:
-        async with session.get(url) as img_resp:
-            form.add_field("photo", await img_resp.read(), filename="image.jpg")
+        ssl_ctx = False if bypass_ssl else None
+        try:
+            async with session.get(url, ssl=ssl_ctx, timeout=timeout_ctx) as img_resp:
+                img_resp.raise_for_status()
+                form.add_field("photo", await img_resp.read(), filename="image.jpg")
+        except Exception as e:
+            _LOGGER.error("Ошибка скачивания фото по URL %s: %s", url, e)
+            raise HomeAssistantError(f"Failed to download image: {e}")
     elif filepath:
         if not hass.config.is_allowed_path(filepath):
             raise HomeAssistantError(f"Path '{filepath}' not allowed.")
-        file_bytes = await hass.async_add_executor_job(lambda: open(filepath, "rb").read())
+        file_bytes = await hass.async_add_executor_job(_read_file_safe, filepath)
         form.add_field("photo", file_bytes, filename=filepath.split("/")[-1])
     else:
         raise HomeAssistantError("Neither URL nor filepath provided for photo upload.")
 
-    async with session.post(upload_url, data=form) as resp:
-        upload_result = await resp.json()
+    async with session.post(upload_url, data=form, timeout=timeout_ctx) as resp:
+        try:
+            upload_result = await resp.json()
+        except Exception:
+            err_text = await resp.text()
+            raise HomeAssistantError(f"Сервер загрузки ВКонтакте недоступен (HTTP {resp.status}). Попробуйте позже.")
 
     if "error" in upload_result or not upload_result.get("photo"):
         raise HomeAssistantError(f"Photo upload error: {upload_result}")
@@ -131,18 +164,18 @@ async def async_upload_photo(hass: HomeAssistant, access_token: str, peer_id: in
     async with session.post(VK_API_PHOTO_SAVE, data={
         "access_token": access_token, "v": VK_API_VERSION,
         "photo": upload_result["photo"], "server": upload_result["server"], "hash": upload_result["hash"]
-    }) as resp:
+    }, timeout=timeout_ctx) as resp:
         data = await resp.json()
         
-    if "error" in data: raise HomeAssistantError(f"VK API error (photos.saveMessagesPhoto): {data['error']}")
+    if "error" in data: raise HomeAssistantError(f"VK API error (saveMessagesPhoto): {data['error']}")
 
     photo = data["response"][0]
     access_key = photo.get("access_key", "")
     return f"photo{photo['owner_id']}_{photo['id']}{'_' + access_key if access_key else ''}"
 
-async def async_upload_file(hass: HomeAssistant, access_token: str, peer_id: int, filepath: str) -> str:
-    """Загрузка документов и голосовых сообщений."""
-    session = async_get_clientsession(hass)
+async def async_upload_file(hass: HomeAssistant, access_token: str, peer_id: int, filepath: str, verify_ssl: bool = True, timeout: int = 60) -> str:
+    session = async_get_clientsession(hass, verify_ssl=verify_ssl)
+    timeout_ctx = aiohttp.ClientTimeout(total=timeout)
     if not hass.config.is_allowed_path(filepath):
         raise HomeAssistantError(f"Path '{filepath}' not allowed.")
         
@@ -150,23 +183,27 @@ async def async_upload_file(hass: HomeAssistant, access_token: str, peer_id: int
 
     async with session.get(VK_API_DOC_UPLOAD_SERVER, params={
         "access_token": access_token, "peer_id": peer_id, "type": doc_type, "v": VK_API_VERSION
-    }) as resp:
+    }, timeout=timeout_ctx) as resp:
         data = await resp.json()
-    if "error" in data: raise HomeAssistantError(f"VK API error (docs.getUploadServer): {data['error']}")
+    if "error" in data: raise HomeAssistantError(f"VK API error (getUploadServer): {data['error']}")
     
     upload_url = data["response"]["upload_url"]
     filename = filepath.split("/")[-1]
-    file_bytes = await hass.async_add_executor_job(lambda: open(filepath, "rb").read())
+    file_bytes = await hass.async_add_executor_job(_read_file_safe, filepath)
     
     form = aiohttp.FormData()
     form.add_field("file", file_bytes, filename=filename)
     
-    async with session.post(upload_url, data=form) as resp:
-        upload_result = await resp.json()
+    async with session.post(upload_url, data=form, timeout=timeout_ctx) as resp:
+        try:
+            upload_result = await resp.json()
+        except Exception:
+            err_text = await resp.text()
+            raise HomeAssistantError(f"Сервер загрузки ВКонтакте недоступен (HTTP {resp.status}). Попробуйте позже.")
 
     async with session.get(VK_API_DOC_SAVE, params={
         "access_token": access_token, "v": VK_API_VERSION, "file": upload_result["file"], "title": filename
-    }) as resp:
+    }, timeout=timeout_ctx) as resp:
         data = await resp.json()
     if "error" in data: raise HomeAssistantError(f"VK API error (docs.save): {data['error']}")
 
@@ -175,3 +212,59 @@ async def async_upload_file(hass: HomeAssistant, access_token: str, peer_id: int
     attachment_type = "doc" if "doc" in response else "audio_message"
     access_key = obj.get("access_key", "")
     return f"{attachment_type}{obj['owner_id']}_{obj['id']}{'_' + access_key if access_key else ''}"
+
+async def async_upload_video(hass: HomeAssistant, access_token: str, peer_id: int, video_access_token: str, url: str | None = None, filepath: str | None = None, caption: str = "", verify_ssl: bool = True, timeout: int = 60) -> str:
+    """Загрузка нативного видео в плеер ВК с помощью токена пользователя."""
+    bypass_ssl = (not verify_ssl) or (url and is_local_url(url))
+    session = async_get_clientsession(hass, verify_ssl=(not bypass_ssl))
+    timeout_ctx = aiohttp.ClientTimeout(total=timeout)
+
+    if url:
+        ssl_ctx = False if bypass_ssl else None
+        try:
+            async with session.get(url, ssl=ssl_ctx, timeout=timeout_ctx) as vid_resp:
+                vid_resp.raise_for_status()
+                file_bytes = await vid_resp.read()
+                filename = url.split("/")[-1].split("?")[0] or "video.mp4"
+                if not filename.endswith(".mp4"):
+                    filename += ".mp4"
+        except Exception as e:
+            _LOGGER.error("Ошибка скачивания видео по URL %s: %s", url, e)
+            raise HomeAssistantError(f"Failed to download video: {e}")
+    elif filepath:
+        if not hass.config.is_allowed_path(filepath):
+            raise HomeAssistantError(f"Path '{filepath}' not allowed.")
+        file_bytes = await hass.async_add_executor_job(_read_file_safe, filepath)
+        filename = filepath.split("/")[-1]
+    else:
+        raise HomeAssistantError("Neither URL nor filepath provided for video upload.")
+
+    async with session.get("https://api.vk.com/method/video.save", params={
+        "access_token": video_access_token, 
+        "name": filename,
+        "description": caption[:4000],
+        "is_private": 0,
+        "v": VK_API_VERSION
+    }, timeout=timeout_ctx) as resp:
+        data = await resp.json()
+        
+    if "error" in data: 
+        raise HomeAssistantError(f"VK API error (video.save): {data['error']}")
+        
+    upload_url = data["response"]["upload_url"]
+    owner_id = data["response"]["owner_id"]
+    video_id = data["response"].get("video_id") or data["response"].get("id")
+    access_key = data["response"].get("access_key", "")
+
+    form = aiohttp.FormData()
+    form.add_field("video_file", file_bytes, filename=filename)
+
+    async with session.post(upload_url, data=form, timeout=timeout_ctx) as upload_resp:
+        if upload_resp.status >= 500:
+            raise HomeAssistantError(f"Сервер загрузки видео ВКонтакте недоступен (HTTP {upload_resp.status}).")
+        if upload_resp.status >= 400:
+            body = await upload_resp.text()
+            raise HomeAssistantError(f"VK video upload failed: {upload_resp.status}, {body[:200]}")
+        await upload_resp.read()
+
+    return f"video{owner_id}_{video_id}{'_' + access_key if access_key else ''}"

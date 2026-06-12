@@ -1,6 +1,7 @@
 """
-VK Notify config_flow.py v1.5.2
+VK Notify config_flow.py v1.5.6
 """
+
 from __future__ import annotations
 
 import voluptuous as vol
@@ -13,6 +14,7 @@ from .const import (
     CONF_GROUP_ID,
     CONF_MODE,
     CONF_PEER_ID,
+    CONF_VERIFY_SSL,
     DOMAIN,
     MODE_API,
     MODE_LONGPOLL,
@@ -24,9 +26,9 @@ STEP_TOKEN_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ACCESS_TOKEN): str,
         vol.Optional("name", default="VK Notify"): str,
+        vol.Optional(CONF_VERIFY_SSL, default=True): bool,
     }
 )
-
 
 async def _detect_group_id(hass, access_token: str) -> int | None:
     """Try to auto-detect group_id from a community token via groups.getById."""
@@ -44,7 +46,6 @@ async def _detect_group_id(hass, access_token: str) -> int | None:
         pass
     return None
 
-
 async def _check_longpoll_access(hass, access_token: str, group_id: int) -> bool:
     """Return True if the token can call groups.getLongPollServer."""
     session = async_get_clientsession(hass)
@@ -58,7 +59,6 @@ async def _check_longpoll_access(hass, access_token: str, group_id: int) -> bool
     except Exception:
         return False
 
-
 async def _validate_token(hass, access_token: str) -> bool:
     session = async_get_clientsession(hass)
     try:
@@ -70,7 +70,6 @@ async def _validate_token(hass, access_token: str) -> bool:
             return "error" not in data
     except Exception:
         return False
-
 
 def _build_conversations(response: dict) -> tuple[dict[str, str], set[str]]:
     profiles = {p["id"]: f"{p['first_name']} {p['last_name']}" for p in response.get("profiles", [])}
@@ -103,7 +102,6 @@ def _build_conversations(response: dict) -> tuple[dict[str, str], set[str]]:
 
     return all_options, writable_ids
 
-
 async def _get_conversations(hass, access_token: str) -> tuple[dict[str, str], set[str]]:
     session = async_get_clientsession(hass)
     async with session.get(
@@ -117,7 +115,6 @@ async def _get_conversations(hass, access_token: str) -> tuple[dict[str, str], s
 
     return _build_conversations(data["response"])
 
-
 class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -126,6 +123,7 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._name: str = "VK Notify"
         self._mode: str = MODE_API
         self._group_id: int | None = None
+        self._verify_ssl: bool = True
 
     async def async_step_user(self, user_input=None):
         errors = {}
@@ -141,6 +139,7 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 else:
                     self._access_token = user_input[CONF_ACCESS_TOKEN]
                     self._name = user_input.get("name", "VK Notify")
+                    self._verify_ssl = user_input.get(CONF_VERIFY_SSL, True)
                     self._group_id = await _detect_group_id(self.hass, self._access_token)
                     return await self.async_step_select_mode()
 
@@ -197,7 +196,6 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             peer_id_str = str(user_input[CONF_PEER_ID]).strip()
             
-            # Подхватываем имя, если чат есть в списке, иначе просто пишем ID
             chat_label = all_options.get(peer_id_str, f"Чат {peer_id_str}")
             card_title = f"{self._name}: {chat_label}"
 
@@ -209,10 +207,10 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_MODE: self._mode,
                     CONF_GROUP_ID: self._group_id,
                     "name": self._name,
+                    CONF_VERIFY_SSL: self._verify_ssl,
                 },
             )
 
-        # Подготавливаем опции для выпадающего списка
         options = [{"value": str(k), "label": v} for k, v in all_options.items()]
 
         return self.async_show_form(
@@ -234,22 +232,26 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reconfigure(self, user_input=None):
         entry = self._get_reconfigure_entry()
         self._access_token = entry.data[CONF_ACCESS_TOKEN]
+        current_verify = entry.data.get(CONF_VERIFY_SSL, True)
 
         errors = {}
         all_options, _ = await _get_conversations(self.hass, self._access_token)
 
         if user_input is not None:
             peer_id_str = str(user_input[CONF_PEER_ID]).strip()
+            new_verify = user_input.get(CONF_VERIFY_SSL, True)
             
             chat_label = all_options.get(peer_id_str, f"Чат {peer_id_str}")
             base_name = entry.data.get("name", "VK Notify")
+            
             self.hass.config_entries.async_update_entry(
-                entry, title=f"{base_name}: {chat_label}"
+                entry, title=f"{base_name}: {chat_label}",
+                data={**entry.data, CONF_PEER_ID: int(peer_id_str), CONF_VERIFY_SSL: new_verify}
             )
             
             return self.async_update_reload_and_abort(
                 entry,
-                data={**entry.data, CONF_PEER_ID: int(peer_id_str)},
+                data={**entry.data, CONF_PEER_ID: int(peer_id_str), CONF_VERIFY_SSL: new_verify},
             )
 
         options = [{"value": str(k), "label": v} for k, v in all_options.items()]
@@ -264,7 +266,8 @@ class VkNotifyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             custom_value=True, # РАЗРЕШАЕТ РУЧНОЙ ВВОД ПРИ ПЕРЕНАСТРОЙКЕ!
                             mode=SelectSelectorMode.DROPDOWN,
                         )
-                    )
+                    ),
+                    vol.Optional(CONF_VERIFY_SSL, default=current_verify): bool,
                 }
             ),
             errors=errors,

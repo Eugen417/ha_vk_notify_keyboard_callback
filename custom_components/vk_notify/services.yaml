@@ -1,4 +1,4 @@
-# VK Notify services.yaml v1.5.2 (Terminology & Full UI Descriptions Update)
+# VK Notify services.yaml v1.6.1 (Added dynamic timeout field)
 send_message:
   name: "Отправить сообщение"
   description: Отправляет текстовое уведомление, медиа, координаты или карусель.
@@ -52,19 +52,15 @@ send_message:
     inline_keyboard:
       name: "Инлайн-клавиатура / Меню (клавиатура)"
       description: >
-        ВКЛ Инлайн-клавиатура: Кнопки «встроены» прямо в само сообщение (в тот же пузырь, где текст). 
-        Они «тихие», потому что позволяют использовать тип callback, который не спамит текстом в чат. 
-        При прокрутке истории такие кнопки уезжают вверх вместе с сообщением.
-        ВЫКЛ Меню (Обычная клавиатура): Это те самые кнопки, которые заменяют собой стандартную клавиатуру 
-        телефона в нижней части экрана. Они «висят» внизу, пока ты их не удалишь или не заменишь на другие, 
-        независимо от того, как далеко ты прокрутил чат.
+        ВКЛ Инлайн-клавиатура: Кнопки «встроены» прямо в само сообщение.
+        ВЫКЛ Меню (Обычная клавиатура): Кнопки заменяют клавиатуру телефона.
       required: false
       default: true
       selector:
         boolean: {}
     auto_answer_callback:
       name: Автоматически гасить кружок (Spinner)
-      description: "ВКЛ (Рекомендуется): Интеграция сама мгновенно остановит загрузку на кнопке. ВЫКЛ: Кружок будет висеть, пока вы не ответите службой 'answer_callback' в автоматизации (нужно для Снэкбаров)."
+      description: "ВКЛ (Рекомендуется): Интеграция сама мгновенно остановит загрузку на кнопке."
       required: false
       default: true
       selector:
@@ -99,6 +95,16 @@ send_message:
       required: false
       selector:
         text: {}
+    timeout:
+      name: Таймаут соединения
+      description: "Максимальное время ожидания ответа от серверов ВК (в секундах)."
+      required: false
+      default: 60
+      selector:
+        number:
+          min: 5
+          max: 600
+          unit_of_measurement: "сек"
     reply_to:
       name: Ответить на сообщение
       description: Идентификатор сообщения (cmid) в беседе, на которое нужно ответить.
@@ -145,7 +151,7 @@ send_photo:
         text: {}
     url:
       name: URL картинки
-      description: Прямая ссылка на картинку в интернете.
+      description: Пмямая ссылка на картинку в интернете.
       required: false
       selector:
         text: {}
@@ -175,6 +181,16 @@ send_photo:
       required: false
       selector:
         object: {}
+    timeout:
+      name: Таймаут соединения
+      description: "Максимальное время ожидания ответа от серверов ВК (в секундах)."
+      required: false
+      default: 60
+      selector:
+        number:
+          min: 5
+          max: 600
+          unit_of_measurement: "сек"
     reply_to:
       name: Ответить на сообщение
       required: false
@@ -243,6 +259,105 @@ send_file:
       required: false
       selector:
         object: {}
+    timeout:
+      name: Таймаут соединения
+      description: "Максимальное время ожидания ответа от серверов ВК (в секундах)."
+      required: false
+      default: 60
+      selector:
+        number:
+          min: 5
+          max: 600
+          unit_of_measurement: "сек"
+    reply_to:
+      name: Ответить на сообщение
+      required: false
+      selector:
+        text: {}
+
+send_video:
+  name: "Отправить видео"
+  description: "Отправляет видеофайл (.mp4) как нативное видео с плеером ВКонтакте. ВНИМАНИЕ: Требуется токен пользователя!"
+  target:
+    entity:
+      integration: vk_notify
+      domain: notify
+  fields:
+    video_access_token:
+      name: Токен пользователя (User Token)
+      description: "Токен реального профиля ВК с правами video и messages. Обязателен для загрузки видео."
+      required: true
+      selector:
+        text: {}
+    file:
+      name: Локальный путь к файлу
+      description: "Например, /media/frigate/clip.mp4"
+      required: false
+      selector:
+        text: {}
+    url:
+      name: URL видео
+      description: "Прямая ссылка на видео в локальной сети или интернете (идеально для Frigate)."
+      required: false
+      selector:
+        text: {}
+    message:
+      name: Подпись к видео
+      required: false
+      selector:
+        text:
+          multiline: true
+    parse_mode:
+      name: Режим разбора
+      default: html
+      selector:
+        select:
+          mode: list
+          options:
+            - label: "HTML"
+              value: html
+            - label: "Markdown (Устаревший)"
+              value: markdown
+            - label: "MarkdownV2"
+              value: markdownv2
+            - label: "Обычный текст"
+              value: plain
+    disable_mentions:
+      name: Без звука для упоминаний
+      required: false
+      default: false
+      selector:
+        boolean: {}
+    payload:
+      name: Скрытые данные (Payload)
+      required: false
+      selector:
+        text: {}
+    inline_keyboard:
+      name: "Инлайн-клавиатура / Меню (клавиатура)"
+      default: true
+      selector:
+        boolean: {}
+    auto_answer_callback:
+      name: Автоматически гасить кружок
+      default: true
+      selector:
+        boolean: {}
+    keyboard:
+      name: Клавиатура
+      required: false
+      selector:
+        object: {}
+    timeout:
+      name: Таймаут соединения
+      description: "Максимальное время ожидания ответа от серверов ВК (в секундах)."
+      required: false
+      default: 60
+      selector:
+        number:
+          min: 5
+          max: 600
+          unit_of_measurement: "сек"
     reply_to:
       name: Ответить на сообщение
       required: false
@@ -311,6 +426,16 @@ send_voice:
       required: false
       selector:
         object: {}
+    timeout:
+      name: Таймаут соединения
+      description: "Максимальное время ожидания ответа от серверов ВК (в секундах)."
+      required: false
+      default: 60
+      selector:
+        number:
+          min: 5
+          max: 600
+          unit_of_measurement: "сек"
     reply_to:
       name: Ответить на сообщение
       required: false
@@ -487,19 +612,49 @@ send_reaction:
   fields:
     conversation_message_id:
       name: Идентификатор сообщения (cmid)
-      description: На какое сообщение поставить реакцию?
+      description: ID сообщения в беседе, на которое нужно поставить реакцию.
+      required: true
+      selector:
+        text: {}
+    reaction_id:
+      name: Реакция
+      description: Выберите эмоцию (для ввода своего ID перейдите в режим YAML).
       required: true
       selector:
         select:
           options:
-            - label: "👍 Палец вверх (1)"
+            - label: "❤️ Сердце (1)"
               value: "1"
-            - label: "👎 Палец вниз (2)"
+            - label: "🔥 Огонь (2)"
               value: "2"
-            - label: "❤ Сердце (3)"
+            - label: "😂 Смех до слез (3)"
               value: "3"
-            - label: "🔥 Огонь (4)"
+            - label: "👍 Палец вверх (4)"
               value: "4"
+            - label: "💩 Какашка (5)"
+              value: "5"
+            - label: "❓ Вопросы (6)"
+              value: "6"
+            - label: "😭 Громкий плач (7)"
+              value: "7"
+            - label: "😡 Гнев (8)"
+              value: "8"
+            - label: "👎 Палец вниз (9)"
+              value: "9"
+            - label: "👌 Окей (10)"
+              value: "10"
+            - label: "😄 Улыбка (11)"
+              value: "11"
+            - label: "🤔 Задумчивость (12)"
+              value: "12"
+            - label: "🙏 Спасибо (13)"
+              value: "13"
+            - label: "😘 Поцелуй (14)"
+              value: "14"
+            - label: "😍 Влюбленные глаза (15)"
+              value: "15"
+            - label: "🎉 Праздник (16)"
+              value: "16"
 
 pin_message:
   name: "Закрепить сообщение"
